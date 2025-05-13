@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     "fastmcp>=2.3.0",
     "mcp[cli]>=1.8.0",
-    "pymssql>=2.3.2",
+    "pymssql==2.3.4",
     "ruff>=0.11.8",
 ]
 
