@@ -41,12 +41,10 @@ async def br_lifespan(server: FastMCP) -> AsyncIterator[BRContext]:
         pass  # Add cleanup code here if needed
 
 # Create an MCP server with lifespan management
-mcp = FastMCP("Business Requests", 
-              version="1.0.0", 
+mcp = FastMCP("Business Requests",
+              version="1.0.0",
               lifespan=br_lifespan,
               dependencies=["pydantic"])  # Add any dependencies your server needs
-
-@mcp.tool()
 
 @mcp.tool()
 async def get_br_database_query(query: BRQuery) -> str:
@@ -59,14 +57,13 @@ async def get_br_database_query(query: BRQuery) -> str:
         The generated SQL query string
     """
     try:
-        user_query = BRQuery.model_validate_json(query)
-        logger.info("Valided query: %s", user_query)
+        logger.info("Valided query: %s", query)
 
         # Prepare the SQL statement for this request.
-        sql_query = get_br_query(limit=bool(user_query.limit),
-                                            br_filters=user_query.query_filters,
+        sql_query = get_br_query(limit=bool(query.limit),
+                                            br_filters=query.query_filters,
                                             active=True,
-                                            status=len(user_query.statuses) if user_query.statuses else 0)
+                                            status=len(query.statuses) if query.statuses else 0)
         return sql_query
     except (json.JSONDecodeError, ValidationError) as e:
         # Handle validation errors

@@ -32,6 +32,22 @@ Pass in this:
 }
 ```
 
+or
+
+```json
+{
+  "query_filters": [
+    {
+      "name": "CPLX_EN",
+      "value": "High",
+      "operator": "="
+    }
+  ],
+  "limit": 100,
+  "statuses": []
+}
+```
+
 ### pymssql issues
 
 ## pymssql on Mac OSX
@@ -41,21 +57,8 @@ Pass in this:
 After which if you have issues with running the code please do the following: 
 
 ```bash
-# ensure that the version of python you are trying to install it with matches the python version on your system.
-# ex: brew install python@3.12
-brew install freetds 
 uv pip uninstall pymssql
-# Set environment for Apple Silicon
-export ARCHFLAGS="-arch arm64"
-export HOMEBREW_PREFIX=$(brew --prefix)
-export FREETDS_PREFIX=$(brew --prefix freetds)
-export OPENSSL_PREFIX=$(brew --prefix openssl@3)
-
-export LDFLAGS="-L$FREETDS_PREFIX/lib -L$OPENSSL_PREFIX/lib"
-export CPPFLAGS="-I$FREETDS_PREFIX/include -I$OPENSSL_PREFIX/include"
-export PKG_CONFIG_PATH="$FREETDS_PREFIX/lib/pkgconfig:$OPENSSL_PREFIX/lib/pkgconfig"
-export PATH="$FREETDS_PREFIX/bin:$OPENSSL_PREFIX/bin:$PATH"
-uv pip install --pre --no-binary=pymssql pymssql --no-cache
+uv pip install --pre --no-binary :all: pymssql --no-cache
 ```
 
 Also you can add to `uv` `pyproject.toml`
@@ -66,6 +69,8 @@ no-binary-package = ["pymssql"]
 ```
 
 After this all should be working.
+
+NOTE: Known issue with `cython==3.1.0` [found here](https://github.com/pymssql/pymssql/issues/937)
 
 ## Documentation
 
