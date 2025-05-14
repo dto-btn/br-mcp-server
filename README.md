@@ -58,7 +58,7 @@ After which if you have issues with running the code please do the following:
 
 ```bash
 uv pip uninstall pymssql
-uv pip install --pre --no-binary :all: pymssql --no-cache
+uv pip install --pre --no-binary :all: pymssql --no-cache --no-build-isolation
 ```
 
 Also you can add to `uv` `pyproject.toml`
@@ -71,6 +71,15 @@ no-binary-package = ["pymssql"]
 After this all should be working.
 
 NOTE: Known issue with `cython==3.1.0` [found here](https://github.com/pymssql/pymssql/issues/937)
+
+Here is how to get around it for now (please remove this once this issue is fixed):
+
+```bash
+export CFLAGS="-I$(brew --prefix freetds)/include"
+export LDFLAGS="-L$(brew --prefix freetds)/lib"
+uv pip install "packaging>=24" "setuptools>=54.0" "setuptools_scm[toml]>=8.0" "wheel>=0.36.2" "Cython==3.0.10" "tomli"
+uv pip install --pre --no-binary :all: pymssql --no-cache --no-build-isolation
+```
 
 ## Documentation
 
