@@ -34,9 +34,9 @@ class BRQueryFilter(BaseModel):
 
 class BRQuery(BaseModel):
     """Represent the query that the AI does on behalf of the user"""
-    query_filters: list[BRQueryFilter] = Field(..., description="List of filters to apply to the query.")
-    limit: int = Field(9000, description="Maximum number of records to return. Optional. Defaults to 9000.") #It's over 9000!
-    statuses: list[str] = Field([], description="List of of STATUS_ID to filter by.")
+    query_filters: Optional[list[BRQueryFilter]] = Field(..., description="List of filters to apply to the query.")
+    limit: Optional[int] = Field(9000, description="Maximum number of records to return. Optional. Defaults to 9000.") #It's over 9000!
+    statuses: Optional[list[str]] = Field([], description="List of of STATUS_ID to filter by.")
 
     # Validator for the 'statuses' field
     @field_validator("statuses")

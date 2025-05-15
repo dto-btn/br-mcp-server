@@ -21,7 +21,7 @@ class DatabaseConnection:
         logger.debug("requesting connection to database to --> %s", self.server)
         return pymssql.connect(server=self.server, user=self.username, password=self.password, database=self.database)  # pylint: disable=no-member
 
-    def execute_query(self, query, *args, result_key='br'):
+    def execute_query(self, query, *args, result_key='br') -> dict:
         """
         Executes a query against the database
 

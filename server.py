@@ -10,9 +10,11 @@ from dotenv import load_dotenv
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import ValidationError
 
+from business_request.br_fields import BRFields
 from business_request.br_models import (BRQuery)
 from business_request.br_prompts import (BITS_SYSTEM_PROMPT_EN,
                                          BITS_SYSTEM_PROMPT_FR)
+from business_request.br_statuses_cache import StatusesCache
 from business_request.br_utils import get_br_query
 from business_request.database import DatabaseConnection
 
@@ -51,7 +53,7 @@ mcp = FastMCP("Business Requests",
               dependencies=["pydantic"])  # Add any dependencies your server needs
 
 @mcp.tool()
-async def search_business_requests(query: BRQuery, ctx: Context) -> str:
+async def search_business_requests(query: BRQuery, ctx: Context) -> dict:
     """Returns the BR database query
     
     Args:
@@ -83,11 +85,13 @@ async def search_business_requests(query: BRQuery, ctx: Context) -> str:
     return result
 
 @mcp.tool()
-def get_br_by_number(br_numbers: list[int], ctx: Context) -> str:
+def get_br_by_number(br_numbers: list[int], ctx: Context) -> dict:
     """Returns a BR requests by their numbers"""
     #BRs here do not need to be active to be returned
     query = get_br_query(len(br_numbers), active=False)
-    return ctx.request_context.lifespan_context.database.execute_query(query, *br_numbers)
+    result = ctx.request_context.lifespan_context.database.execute_query(query, *br_numbers)
+    ctx.request_context.lifespan_context.results = result
+    return result
 
 @mcp.tool()
 def get_business_requests_context(ctx: Context) -> str:
@@ -97,6 +101,63 @@ def get_business_requests_context(ctx: Context) -> str:
         return ctx.request_context.lifespan_context.results
     else:
         raise ValueError("No business request results found in context")
+
+@mcp.tool()
+def get_br_statuses_and_phases() -> dict:
+    """
+    This will retreive the code table BR_STATUSES (Active == True)
+        (and distinct DISP_STATUS_EN, since we dont want duplicates)
+
+    WITH DistinctStatus AS (
+        SELECT DISP_STATUS_EN, MIN(STATUS_ID) AS MinStatusID
+        FROM [EDR_CARZ].[DIM_BITS_STATUS]
+        WHERE BR_ACTIVE_EN = 'Active'
+        GROUP BY DISP_STATUS_EN
+    )
+    SELECT
+        t.STATUS_ID,
+        ds.DISP_STATUS_EN AS NAME_EN,
+        t.DISP_STATUS_FR AS NAME_FR,
+        t.BITS_PHASE_EN AS PHASE_EN,
+        t.BITS_PHASE_FR AS PHASE_FR
+    FROM
+        DistinctStatus AS ds
+    JOIN
+        [EDR_CARZ].[DIM_BITS_STATUS] AS t
+    ON
+        ds.DISP_STATUS_EN = t.DISP_STATUS_EN AND ds.MinStatusID = t.STATUS_ID
+    WHERE
+        t.BR_ACTIVE_EN = 'Active';
+    """
+    return { "statuses": StatusesCache.get_statuses() }
+
+@mcp.tool()
+def get_organization_names(ctx: Context) -> dict:
+    """
+    This will retreive organization so AI can look them up.
+    """
+    query = """
+    SELECT GC_ORG_NAME_EN, GC_ORG_NAME_FR, ORG_SHORT_NAME, ORG_ACRN_EN, ORG_ACRN_FR, ORG_ACRN_BIL, ORG_WEBSITE
+    FROM EDR_CARZ.DIM_GC_ORGANIZATION
+    """
+    return ctx.request_context.lifespan_context.database.execute_query(query, result_key="org_names")
+
+@mcp.tool()
+def valid_search_fields() -> dict:
+    """
+    This function returns all the valid search fields
+    """
+    fields_with_descriptions = {
+        key: {
+            'description': value.get('description', ''),
+            'is_user_field': value.get('is_user_field', False)
+        }
+        for key, value in BRFields.valid_search_fields_no_statuses.items()
+    }
+    
+    return {
+        "field_names": json.dumps(fields_with_descriptions)
+    }
 
 @mcp.prompt(description="""Business Request Prompt.
             Anything that relates to BR (Business Request) should be handled by this prompt.
