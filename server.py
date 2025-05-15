@@ -27,6 +27,15 @@ class BRContext:
     """Context for Business Request operations"""
     database: DatabaseConnection
     results: Optional[BrResults] = None
+    
+    def set_results(self, results: BrResults) -> None:
+        """Set the results in the context
+        
+        Args:
+            results: The business request results to store in context
+        """
+        self.results = results
+        logger.debug(f"Updated context with {len(results.br)} business requests")
 
 @asynccontextmanager
 async def server_lifespan(server: FastMCP) -> AsyncIterator[BRContext]:
@@ -60,7 +69,7 @@ async def search_business_requests(query: BRQuery, ctx: Context) -> str:
     Returns:
         The generated SQL query string
     """
-    ctx.info(f"Validated query: {query}")
+    await ctx.info(f"Validated query: {query}")
     # Prepare the SQL statement for this request.
     sql_query = get_br_query(limit=bool(query.limit),
                                         br_filters=query.query_filters,
@@ -78,7 +87,7 @@ async def search_business_requests(query: BRQuery, ctx: Context) -> str:
             query_params.append(f"%{query_filter.value}%")
     query_params.append(query.limit)
     result = ctx.request_context.lifespan_context.database.execute_query(sql_query, *query_params)
-    
+
     # Create BrResults object from the query result
     try:
         # Extract metadata
@@ -88,19 +97,27 @@ async def search_business_requests(query: BRQuery, ctx: Context) -> str:
             total_rows=result["metadata"]["total_rows"],
             extraction_date=result["metadata"]["extraction_date"]
         )
-        
+
         # Create BrResults object
+        # Handle any JSON deserialization issues when converting from database result to Pydantic model
         br_results = BrResults(
             br=result["br"],
             metadata=metadata
         )
-        
-        # Store results in the context
-        ctx.request_context.lifespan_context.results = br_results
-        ctx.info(f"Stored {len(br_results.br)} business requests in context")
+
+        # Store results in the context using the setter method
+        ctx.request_context.lifespan_context.set_results(br_results)
+        logger.info(f"Stored {len(br_results.br)} business requests in context")
+    except ValidationError as ve:
+        logger.error(f"Pydantic validation error creating BrResults object: {str(ve)}")
+        # Log more detailed validation error information if needed
+        for error in ve.errors():
+            logger.error(f"Field: {error.get('loc', 'unknown')}, Error: {error.get('msg', 'unknown')}")
     except Exception as e:
-        ctx.error(f"Failed to create BrResults object: {str(e)}")
-    
+        logger.error(f"Failed to create BrResults object: {str(e)}")
+        import traceback
+        logger.error(f"Exception traceback: {traceback.format_exc()}")
+
     # Append the original query to the result (keep for compatibility)
     result["brquery"] = query.model_dump()
     return result
