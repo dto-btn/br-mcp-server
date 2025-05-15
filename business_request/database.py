@@ -6,7 +6,7 @@ from datetime import datetime
 import pymssql
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 class DatabaseConnection:
     """Database connection class."""
@@ -75,9 +75,8 @@ class DatabaseConnection:
             # Ensure the connection is closed
             conn.close()
 
-    def _datetime_serializer(obj):
+    def _datetime_serializer(self, obj):
         """JSON serializer for datetime objects."""
         if isinstance(obj, datetime):
             return obj.isoformat()
         raise TypeError(f"Type {type(obj)} not serializable")
-

@@ -191,7 +191,7 @@ dependencies = [
 requires-dist = [
     { name = "fastmcp", specifier = ">=2.3.0" },
     { name = "mcp", extras = ["cli"], specifier = ">=1.8.0" },
-    { name = "pymssql", specifier = "==2.3.4" },
+    { name = "pymssql", specifier = ">=2.3.4" },
     { name = "ruff", specifier = ">=0.11.8" },
 ]
 

@@ -48,9 +48,9 @@ or
 }
 ```
 
-### pymssql issues
+## pymssql issues
 
-## pymssql on Mac OSX
+### pymssql on Mac OSX
 
 `pymssql` has dependency with **FreeTDS**, as such ensure you install it beforehand `brew install freetds`.
 
