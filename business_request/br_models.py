@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional
+from typing import Any, Optional
 
 from business_request.br_fields import BRFields
 from business_request.br_statuses_cache import StatusesCache
@@ -49,3 +49,31 @@ class BRQuery(BaseModel):
             raise ValueError(f"Invalid STATUS_ID(s): {invalid}. Must be one of: {sorted(valid_statuses)}")
         return v
 
+class FilterParams(BaseModel):
+    """Parameters for filtering results using pandas"""
+    column: str
+    value: Any
+    operator: str = "eq"  # Default operator is equality
+
+    def apply_filter(self, df):
+        """Apply the filter to a pandas DataFrame"""
+        if self.operator == "eq":
+            return df[df[self.column] == self.value]
+        elif self.operator == "neq":
+            return df[df[self.column] != self.value]
+        elif self.operator == "gt":
+            return df[df[self.column] > self.value]
+        elif self.operator == "lt":
+            return df[df[self.column] < self.value]
+        elif self.operator == "gte":
+            return df[df[self.column] >= self.value]
+        elif self.operator == "lte":
+            return df[df[self.column] <= self.value]
+        elif self.operator == "contains":
+            return df[df[self.column].astype(str).str.contains(str(self.value), case=False, na=False)]
+        elif self.operator == "startswith":
+            return df[df[self.column].astype(str).str.startswith(str(self.value), na=False)]
+        elif self.operator == "endswith":
+            return df[df[self.column].astype(str).str.endswith(str(self.value), na=False)]
+        else:
+            raise ValueError(f"Unsupported operator: {self.operator}")

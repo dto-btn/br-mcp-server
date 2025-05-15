@@ -14,7 +14,7 @@ python server.py
 
 Navigate to the URL it showed to test your server.
 
-And then you can test functions such as Templates, and then `get_br_database_query`: 
+And then you can test functions such as Templates, and then `search_business_requests`: 
 
 Pass in this:
 
@@ -22,31 +22,27 @@ Pass in this:
 {
   "query_filters": [
     {
-      "name": "BR_OWNER",
-      "value": "John Smith",
+      "name": "BR_SHORT_TITLE",
+      "value": "Server",
       "operator": "="
     }
-  ],
-  "limit": 100,
-  "statuses": []
+  ]
 }
 ```
 
-or
+And then you can filter on the results via `filter_results`: 
 
 ```json
-{
-  "query_filters": [
-    {
-      "name": "CPLX_EN",
-      "value": "High",
-      "operator": "="
-    }
-  ],
-  "limit": 100,
-  "statuses": []
-}
+[
+  {
+    "column": "RPT_GC_ORG_NAME_EN",
+    "operator": "contains",
+    "value": "Correctional"
+  }
+]
 ```
+
+
 
 ## pymssql issues
 
