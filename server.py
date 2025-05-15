@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import ValidationError
 
-from business_request.br_models import BRQuery, BrResults, BusinessRequest, Metadata
+from business_request.br_models import (BRQuery)
 from business_request.br_prompts import (BITS_SYSTEM_PROMPT_EN,
                                          BITS_SYSTEM_PROMPT_FR)
 from business_request.br_utils import get_br_query
@@ -26,16 +26,7 @@ logger.setLevel(logging.DEBUG)
 class BRContext:
     """Context for Business Request operations"""
     database: DatabaseConnection
-    results: Optional[BrResults] = None
-    
-    def set_results(self, results: BrResults) -> None:
-        """Set the results in the context
-        
-        Args:
-            results: The business request results to store in context
-        """
-        self.results = results
-        logger.debug(f"Updated context with {len(results.br)} business requests")
+    results: Optional[str] = None
 
 @asynccontextmanager
 async def server_lifespan(server: FastMCP) -> AsyncIterator[BRContext]:
@@ -87,39 +78,8 @@ async def search_business_requests(query: BRQuery, ctx: Context) -> str:
             query_params.append(f"%{query_filter.value}%")
     query_params.append(query.limit)
     result = ctx.request_context.lifespan_context.database.execute_query(sql_query, *query_params)
-
-    # Create BrResults object from the query result
-    try:
-        # Extract metadata
-        metadata = Metadata(
-            execution_time=result["metadata"]["execution_time"],
-            results=result["metadata"]["results"],
-            total_rows=result["metadata"]["total_rows"],
-            extraction_date=result["metadata"]["extraction_date"]
-        )
-
-        # Create BrResults object
-        # Handle any JSON deserialization issues when converting from database result to Pydantic model
-        br_results = BrResults(
-            br=result["br"],
-            metadata=metadata
-        )
-
-        # Store results in the context using the setter method
-        ctx.request_context.lifespan_context.set_results(br_results)
-        logger.info(f"Stored {len(br_results.br)} business requests in context")
-    except ValidationError as ve:
-        logger.error(f"Pydantic validation error creating BrResults object: {str(ve)}")
-        # Log more detailed validation error information if needed
-        for error in ve.errors():
-            logger.error(f"Field: {error.get('loc', 'unknown')}, Error: {error.get('msg', 'unknown')}")
-    except Exception as e:
-        logger.error(f"Failed to create BrResults object: {str(e)}")
-        import traceback
-        logger.error(f"Exception traceback: {traceback.format_exc()}")
-
-    # Append the original query to the result (keep for compatibility)
     result["brquery"] = query.model_dump()
+    ctx.request_context.lifespan_context.results = result
     return result
 
 @mcp.tool()
@@ -130,7 +90,7 @@ def get_br_by_number(br_numbers: list[int], ctx: Context) -> str:
     return ctx.request_context.lifespan_context.database.execute_query(query, *br_numbers)
 
 @mcp.tool()
-def get_business_requests_context(ctx: Context) -> BrResults:
+def get_business_requests_context(ctx: Context) -> str:
     """Returns the context of the business requests"""
     # Check if results are available in the context
     if ctx.request_context.lifespan_context.results:
