@@ -51,7 +51,7 @@ async def server_lifespan(server: FastMCP) -> AsyncIterator[BRContext]:
 mcp = FastMCP("Business Requests",
               version="1.0.0",
               lifespan=server_lifespan,
-              dependencies=["pydantic", "pandas"])  # Add any dependencies your server needs
+              dependencies=["pydantic", "pandas"]) # Add any dependencies your server needs
 
 @mcp.tool()
 async def search_business_requests(query: BRQuery, ctx: Context) -> dict:

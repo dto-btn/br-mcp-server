@@ -42,7 +42,12 @@ And then you can filter on the results via `filter_results`:
 ]
 ```
 
+## Running via Docker
 
+```bash
+docker build -t mcp-bits:local .
+docker run -p 8080:8080 --env-file ./.env --name mcp-bits-container mcp-bits:local
+```
 
 ## pymssql issues
 
