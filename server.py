@@ -11,13 +11,15 @@ from dotenv import load_dotenv
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import BaseModel, ValidationError
 
+from auth.provider import MSAuthProvider
 from business_request.br_fields import BRFields
 from business_request.br_models import BRQuery, FilterParams
-from business_request.br_prompts import (BITS_SYSTEM_PROMPT_EN,
-                                         BITS_SYSTEM_PROMPT_FR)
+from business_request.br_prompts import BITS_SYSTEM_PROMPT_EN, BITS_SYSTEM_PROMPT_FR
 from business_request.br_statuses_cache import StatusesCache
 from business_request.br_utils import get_br_query
 from business_request.database import DatabaseConnection
+from mcp.server.auth.settings import AuthSettings
+from mcp.server.auth.provider import OAuthAuthorizationServerProvider
 
 # Load environment variables from .env file
 load_dotenv()
@@ -51,7 +53,15 @@ async def server_lifespan(server: FastMCP) -> AsyncIterator[BRContext]:
 mcp = FastMCP("Business Requests",
               version="1.0.0",
               lifespan=server_lifespan,
-              dependencies=["pydantic", "pandas"]) # Add any dependencies your server needs
+              dependencies=["pydantic", "pandas"], # Add any dependencies your server needs
+              auth_server_provider=MSAuthProvider(),
+              auth=AuthSettings(
+                  issuer_url="https://auth.example.com",
+                  client_id=os.getenv("CLIENT_ID"),
+                  client_secret=os.getenv("CLIENT_SECRET"),
+                  redirect_uri=os.getenv("REDIRECT_URI"),
+                  scopes=["openid", "profile", "email"],
+              ))
 
 @mcp.tool()
 async def search_business_requests(query: BRQuery, ctx: Context) -> dict:

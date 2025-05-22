@@ -5,7 +5,7 @@ Demo PoC MCP server to be used in other PoC
 
 ```bash
 uv venv
-uv pip install -r pyproject.toml
+uv pip install -e .
 # then run it locally
 mcp dev server.py
 # or alternatively
@@ -86,4 +86,5 @@ uv pip install --pre --no-binary :all: pymssql --no-cache --no-build-isolation
 
 * [Using this](https://github.com/modelcontextprotocol/python-sdk) as tutorial on how to build the demo.
 * [FastMCP documentation](https://gofastmcp.com/servers/context)
+* [MCP OAuth 2.0 Authentication](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization)
 
