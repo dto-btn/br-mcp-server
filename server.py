@@ -54,14 +54,14 @@ mcp = FastMCP("Business Requests",
               version="1.0.0",
               lifespan=server_lifespan,
               dependencies=["pydantic", "pandas"], # Add any dependencies your server needs
-              auth_server_provider=MSAuthProvider(),
-              auth=AuthSettings(
-                  issuer_url="https://auth.example.com",
-                  client_id=os.getenv("CLIENT_ID"),
-                  client_secret=os.getenv("CLIENT_SECRET"),
-                  redirect_uri=os.getenv("REDIRECT_URI"),
-                  scopes=["openid", "profile", "email"],
-              ))
+            #   auth_server_provider=MSAuthProvider(),
+            #   auth=AuthSettings(
+            #       issuer_url="https://auth.example.com",
+            #       client_id=os.getenv("CLIENT_ID"),
+            #       client_secret=os.getenv("CLIENT_SECRET"),
+            #       redirect_uri=os.getenv("REDIRECT_URI"),
+            #       scopes=["openid", "profile", "email"],)
+            )
 
 @mcp.tool()
 async def search_business_requests(query: BRQuery, ctx: Context) -> dict:
