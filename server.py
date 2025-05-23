@@ -94,7 +94,7 @@ async def search_business_requests(query: BRQuery, ctx: Context) -> dict:
     result = ctx.request_context.lifespan_context.database.execute_query(sql_query, *query_params)
     result["brquery"] = query.model_dump()
     ctx.request_context.lifespan_context.results = result
-    return result['metadata']
+    return f"Ran the query sucessfully, here is the metadata results from running this query: {result['metadata']}"
 
 @mcp.tool()
 def get_br_by_number(br_numbers: list[int], ctx: Context) -> dict:

@@ -127,17 +127,18 @@ class MCPClient:
                 tools=available_tools,
             )
             message = response.choices[0].message
-            logger.debug(f"Message Received: {message}")
+            #logger.debug(f"Message Received: {message}")
 
             if message.content:
                 final_text.append(message.content)
 
             if hasattr(message, "tool_calls") and message.tool_calls:
-                logger.debug(f"Tool calls: {message.tool_calls}")
+                #logger.debug(f"Tool calls: {message.tool_calls}")
                 for tool_call in message.tool_calls:
                     tool_name = tool_call.function.name
                     tool_args = json.loads(tool_call.function.arguments)
                     result = await self.session.call_tool(tool_name, tool_args)
+                    logger.debug(f"[Called tool {tool_name} with args {tool_args}]")
                     final_text.append(f"[Called tool {tool_name} with args {tool_args}]")
                     # Continue conversation with tool results
                     if hasattr(message, "content") and message.content:
@@ -163,7 +164,9 @@ class MCPClient:
                 if query.lower() == "context":
                     # Get context from the server
                     result = await self.session.call_tool('get_business_requests_context', {})
-                    print("\nContext: \n", result)
+                    result = json.loads(result.content[0].text)
+                    if 'metadata' in result:
+                        print("\nContext: \n", result['metadata'])
                     continue
 
                 response = await self.process_query(query)
