@@ -24,9 +24,11 @@ from mcp.types import PromptMessage, TextContent
 from openai import AsyncOpenAI, AzureOpenAI
 
 # Set up logging
-logging.basicConfig(level=logging.INFO,
-                   format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 # Load environment variables from .env file
 load_dotenv()
@@ -74,11 +76,23 @@ class MCPClient:
         await self.session.initialize()
 
     async def process_query(self, query: str) -> str:
-        """Process a query using Claude and available tools"""
-        messages = [{"role": "user", "content": query}]
+        """Process a query using OpenAI and available tools"""
+        system_prompt = await self.session.get_prompt("business_request_prompt", {"language": "en"})
+        messages = []
+        for message in system_prompt.messages:
+            if message.content.type == "text":
+                messages.append(
+                    {
+                        "role": message.role,
+                        "content": message.content.text,
+                    }
+                )
+        messages.append({"role": "user", "content": query})
 
         response = await self.session.list_tools()
-        logger.debug(f"Available tools: {response.tools}")
+        #logger.debug(f"Available tools: {response.tools}")
+        # should be a fasterway to do this, such as using the tool.inputSchema directly, but couldn't do it quickly.
+        # mcp is also supported directly in OpenAI API now ... you can just pass the server directly.
         available_tools = [
             {
                 "type": "function",
@@ -95,41 +109,42 @@ class MCPClient:
             for tool in response.tools
         ]
 
-        # Initial Claude API call
-        response = self.aoi.chat.completions.create(
-            model="gpt-4o",
-            max_tokens=1000,
-            messages=messages,
-            tools=available_tools,
-        )
+        # available_tools.append([
+        #     [{
+        #         "type": "mcp",
+        #         "server_label": "business_requests",
+        #         "server_url": mcp_server_url,
+        #     }]
+        # ])
 
-        # Process response and handle tool calls
+        additional_tools_required = True
         final_text = []
+        while additional_tools_required:
 
-        for content in response.choices[0].message.content:
-            if content.type == "text":
-                final_text.append(content.text)
-            elif content.type == "tool_use":
-                tool_name = content.name
-                tool_args = content.input
+            response = self.aoi.chat.completions.create(
+                model="gpt-4o",
+                messages=messages,
+                tools=available_tools,
+            )
+            message = response.choices[0].message
+            logger.debug(f"Message Received: {message}")
 
-                # Execute tool call
-                result = await self.session.call_tool(tool_name, tool_args)
-                final_text.append(f"[Calling tool {tool_name} with args {tool_args}]")
+            if message.content:
+                final_text.append(message.content)
 
-                # Continue conversation with tool results
-                if hasattr(content, "text") and content.text:
-                    messages.append({"role": "assistant", "content": content.text})
-                messages.append({"role": "user", "content": result.content})
-
-                # Get next response from Claude
-                response = self.aoi.chat.completions.create(
-                    model="gpt-4o",
-                    max_tokens=1000,
-                    messages=messages,
-                )
-
-                final_text.append(response.choices[0].message.content)
+            if hasattr(message, "tool_calls") and message.tool_calls:
+                logger.debug(f"Tool calls: {message.tool_calls}")
+                for tool_call in message.tool_calls:
+                    tool_name = tool_call.function.name
+                    tool_args = json.loads(tool_call.function.arguments)
+                    result = await self.session.call_tool(tool_name, tool_args)
+                    final_text.append(f"[Called tool {tool_name} with args {tool_args}]")
+                    # Continue conversation with tool results
+                    if hasattr(message, "content") and message.content:
+                        messages.append({"role": "assistant", "content": message.content})
+                    messages.append({"role": "user", "content": result.content})
+            else:
+                additional_tools_required = False #exit clause
 
         return "\n".join(final_text)
 
@@ -144,6 +159,12 @@ class MCPClient:
 
                 if query.lower() == "quit":
                     break
+
+                if query.lower() == "context":
+                    # Get context from the server
+                    result = await self.session.call_tool('get_business_requests_context', {})
+                    print("\nContext: \n", result)
+                    continue
 
                 response = await self.process_query(query)
                 print("\n" + response)

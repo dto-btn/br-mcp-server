@@ -20,6 +20,7 @@ from business_request.br_utils import get_br_query
 from business_request.database import DatabaseConnection
 from mcp.server.auth.settings import AuthSettings
 from mcp.server.auth.provider import OAuthAuthorizationServerProvider
+from mcp.server.fastmcp.prompts.base import Message
 
 # Load environment variables from .env file
 load_dotenv()
@@ -93,7 +94,7 @@ async def search_business_requests(query: BRQuery, ctx: Context) -> dict:
     result = ctx.request_context.lifespan_context.database.execute_query(sql_query, *query_params)
     result["brquery"] = query.model_dump()
     ctx.request_context.lifespan_context.results = result
-    return result
+    return result['metadata']
 
 @mcp.tool()
 def get_br_by_number(br_numbers: list[int], ctx: Context) -> dict:
@@ -173,9 +174,12 @@ def valid_search_fields() -> dict:
 @mcp.prompt(description="""Business Request Prompt.
             Anything that relates to BR (Business Request) should be handled by this prompt.
             Ask for 'en' or 'fr'""")
-def business_request_prompt(language: str) -> str:
+def business_request_prompt(language: str) -> list[Message]:
     """Prompt for business request"""
-    return BITS_SYSTEM_PROMPT_FR if language == "fr" else BITS_SYSTEM_PROMPT_EN
+    return [{
+        "role": "user",
+        "content": BITS_SYSTEM_PROMPT_FR if language == "fr" else BITS_SYSTEM_PROMPT_EN
+    }]
 
 @mcp.tool()
 def filter_results(filters: list[FilterParams], ctx: Context) -> dict:
