@@ -107,6 +107,7 @@ class MCPClient:
                 },
             }
             for tool in response.tools
+            if tool.name != "get_business_requests_context"
         ]
 
         # available_tools.append([

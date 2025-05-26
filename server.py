@@ -8,19 +8,20 @@ from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 from dotenv import load_dotenv
+from mcp.server.auth.provider import OAuthAuthorizationServerProvider
+from mcp.server.auth.settings import AuthSettings
 from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.fastmcp.prompts.base import Message
 from pydantic import BaseModel, ValidationError
 
 from auth.provider import MSAuthProvider
 from business_request.br_fields import BRFields
 from business_request.br_models import BRQuery, FilterParams
-from business_request.br_prompts import BITS_SYSTEM_PROMPT_EN, BITS_SYSTEM_PROMPT_FR
+from business_request.br_prompts import (BITS_SYSTEM_PROMPT_EN,
+                                         BITS_SYSTEM_PROMPT_FR)
 from business_request.br_statuses_cache import StatusesCache
 from business_request.br_utils import get_br_query
 from business_request.database import DatabaseConnection
-from mcp.server.auth.settings import AuthSettings
-from mcp.server.auth.provider import OAuthAuthorizationServerProvider
-from mcp.server.fastmcp.prompts.base import Message
 
 # Load environment variables from .env file
 load_dotenv()
@@ -220,6 +221,63 @@ def filter_results(filters: list[FilterParams], ctx: Context) -> dict:
 
         return results
     return []
+
+@mcp.tool()
+def summarize_br_results(ctx: Context) -> dict:
+    """
+    Returns summary statistics of the business request results, focusing on key fields.
+    """
+    results = ctx.request_context.lifespan_context.results
+    if not results or "br" not in results:
+        raise ValueError("No business request results found in context")
+    df = pd.DataFrame(results["br"])
+    summary = {"total": len(df)}
+
+    # Fields to summarize (using keys from BRFields)
+    fields_to_summarize = []
+    # Add all status fields
+    fields_to_summarize.extend(BRFields.status.keys())
+    # Add specific fields
+    fields_to_summarize.extend([
+        "BR_OWNER",
+        "LEAD_PRODUCT_EN", "LEAD_PRODUCT_FR",
+        "RPT_GC_ORG_NAME_EN", "RPT_GC_ORG_NAME_FR",
+        "PRIORITY_EN", "PRIORITY_FR",
+        "CPLX_EN",
+        "SCOPE_EN",
+        "GROUP_EN", "GROUP_FR"
+    ])
+
+    for field in fields_to_summarize:
+        if field in df:
+            summary[field] = df[field].value_counts(dropna=False).to_dict()
+
+    return summary
+
+@mcp.tool()
+def get_br_fields(fields: list[str], ctx: Context) -> dict:
+    """
+    Returns only the requested fields from the business request results.
+    """
+    results = ctx.request_context.lifespan_context.results
+    if not results or "br" not in results:
+        raise ValueError("No business request results found in context")
+    df = pd.DataFrame(results["br"])
+    filtered = df[fields] if fields else df
+    return filtered.to_dict(orient="records")
+
+@mcp.tool()
+def get_br_page(page: int, page_size: int, ctx: Context) -> dict:
+    """
+    Returns a page of business request results from the context.
+    """
+    results = ctx.request_context.lifespan_context.results
+    if not results or "br" not in results:
+        raise ValueError("No business request results found in context")
+    data = results["br"]
+    start = page * page_size
+    end = start + page_size
+    return {"page": page, "page_size": page_size, "results": data[start:end]}
 
 if __name__ == "__main__":
     mcp.run(transport="streamable-http") # supported since 2.3.0
