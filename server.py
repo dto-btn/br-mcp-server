@@ -240,8 +240,8 @@ def filter_results(filters: list[FilterParams], ctx: Context) -> dict:
         return results
     return []
 
-@mcp.tool(description="""Returns summary statistics of the business request results, focusing on key fields.""")
-def summarize_br_results(ctx: Context) -> dict:
+@mcp.tool(description="""Returns summary statistics of the business request results found in context, focusing on key fields.""")
+def statistic_summary(ctx: Context) -> dict:
     """
     Returns summary statistics of the business request results, focusing on key fields.
     """
@@ -254,29 +254,23 @@ def summarize_br_results(ctx: Context) -> dict:
     # Fields to summarize (using keys from BRFields)
     fields_to_summarize = []
     # Add all status fields
-    fields_to_summarize.extend(BRFields.status.keys())
-    # Add specific fields
-    fields_to_summarize.extend([
-        "BR_OWNER",
-        "LEAD_PRODUCT_EN", "LEAD_PRODUCT_FR",
-        "RPT_GC_ORG_NAME_EN", "RPT_GC_ORG_NAME_FR",
-        "PRIORITY_EN", "PRIORITY_FR",
-        "CPLX_EN",
-        "SCOPE_EN",
-        "GROUP_EN", "GROUP_FR"
-    ])
-
+    fields_to_summarize.extend(BRFields.valid_search_fields.keys())
     for field in fields_to_summarize:
         if field in df:
             summary[field] = df[field].value_counts(dropna=False).to_dict()
 
     return summary
 
-@mcp.tool()
+@mcp.tool(description="""Returns only the requested fields from the business request results found in the context.
+          This is useful for extracting specific information from the results.
+          Only fields from valid_search_fields() tool can be used.""")
 def get_br_fields(fields: list[str], ctx: Context) -> dict:
     """
     Returns only the requested fields from the business request results.
     """
+    for field in fields:
+        if field not in BRFields.valid_search_fields:
+                raise ValueError(f"Field must be one of {list(BRFields.valid_search_fields.keys())}")
     results = ctx.request_context.lifespan_context.results
     if not results or "br" not in results:
         raise ValueError("No business request results found in context")
@@ -284,11 +278,14 @@ def get_br_fields(fields: list[str], ctx: Context) -> dict:
     filtered = df[fields] if fields else df
     return filtered.to_dict(orient="records")
 
-@mcp.tool()
-def get_br_page(page: int, page_size: int, ctx: Context) -> dict:
+@mcp.tool(description="""Returns a page of business request results from the context.
+          This is useful for paginating large result sets.
+          The page size is 100 records.""")
+def get_br_page(page: int, ctx: Context) -> dict:
     """
     Returns a page of business request results from the context.
     """
+    page_size = 100
     results = ctx.request_context.lifespan_context.results
     if not results or "br" not in results:
         raise ValueError("No business request results found in context")
