@@ -65,7 +65,7 @@ mcp = FastMCP("Business Requests",
             #       scopes=["openid", "profile", "email"],)
             )
 
-@mcp.tool()
+@mcp.tool(description="This tool searches information about BRs given specific BR field(s) and value(s) pairs.")
 async def search_business_requests(query: BRQuery, ctx: Context) -> dict:
     """Returns the BR database query
 
@@ -97,7 +97,9 @@ async def search_business_requests(query: BRQuery, ctx: Context) -> dict:
     ctx.request_context.lifespan_context.results = result
     return f"Ran the query sucessfully, here is the metadata results from running this query: {result['metadata']}"
 
-@mcp.tool()
+@mcp.tool(description="""Returns Business Request(s) (BR) information.
+          Can be invoked for one OR many BR numbers at the same time.
+          I.e; Give me BR info for 12345, 32456 and 66123. Should only invoke this function once""")
 def get_br_by_number(br_numbers: list[int], ctx: Context) -> dict:
     """Returns a BR requests by their numbers"""
     #BRs here do not need to be active to be returned
@@ -115,7 +117,10 @@ def get_business_requests_context(ctx: Context) -> str:
     else:
         raise ValueError("No business request results found in context")
 
-@mcp.tool()
+@mcp.tool(description="""Use this function to list all the BR Statuses and Phases.
+          This can be used to get the STATUS_ID. To perform search in other queries.
+          NEVER ASSUME THE USER GIVES YOU A VALID STATUS.
+          ALWAYS USE THIS FUNCTION TO GET THE LIST OF STATUSES AND THEIR ID.""")
 def get_br_statuses_and_phases() -> dict:
     """
     This will retreive the code table BR_STATUSES (Active == True)
@@ -144,7 +149,11 @@ def get_br_statuses_and_phases() -> dict:
     """
     return { "statuses": StatusesCache.get_statuses() }
 
-@mcp.tool()
+@mcp.tool(description="""Use this function to list all organization and get a proper value for the RPT_GC_ORG_NAME_EN
+          or RPT_GC_ORG_NAME_FR fields which are also refered to as clients.
+          This can be invoked when a user is searching for BRs by a client name but is using the acronym.
+          Example: Search for BRs with clients PC.
+          You would resolve it to Parks Canada and search for RPT_GC_ORG_NAME_EN = Parks Canada.""")
 def get_organization_names(ctx: Context) -> dict:
     """
     This will retreive organization so AI can look them up.
@@ -155,7 +164,10 @@ def get_organization_names(ctx: Context) -> dict:
     """
     return ctx.request_context.lifespan_context.database.execute_query(query, result_key="org_names")
 
-@mcp.tool()
+@mcp.tool(description="""Use this function to list all the valid search fields.
+          This can be used to get the field names that are available to search for BRs.
+          French and english label are included. The user might use the labels to see what fields the users are
+          refering to when they use language instead of directly typing the field names.""")
 def valid_search_fields() -> dict:
     """
     This function returns all the valid search fields
@@ -182,7 +194,13 @@ def business_request_prompt(language: str) -> list[Message]:
         "content": BITS_SYSTEM_PROMPT_FR if language == "fr" else BITS_SYSTEM_PROMPT_EN
     }]
 
-@mcp.tool()
+@mcp.tool(description="""Allows to filter the results in the context using pandas DataFrame operations.
+          Each filter is a dictionary with keys:
+          - column: The column name to filter on
+          - value: The value to filter by
+          - operator: The operator to use (eq, neq, gt, lt, gte, lte, contains, startswith, endswith)
+          Can only be used after a search_business_requests has been invoked.
+          Only use this function if you cannot use the search_business_requests function to get the desired results.""")
 def filter_results(filters: list[FilterParams], ctx: Context) -> dict:
     """
     Filters the results in the context using pandas DataFrame operations.
@@ -222,7 +240,7 @@ def filter_results(filters: list[FilterParams], ctx: Context) -> dict:
         return results
     return []
 
-@mcp.tool()
+@mcp.tool(description="""Returns summary statistics of the business request results, focusing on key fields.""")
 def summarize_br_results(ctx: Context) -> dict:
     """
     Returns summary statistics of the business request results, focusing on key fields.
