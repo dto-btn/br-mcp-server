@@ -39,7 +39,7 @@ jobs:
       
       - name: Install dependencies with uv
         run: |
-          uv pip install -e .
+          uv pip install --binary pymssql -e .
           
       - name: Zip artifact for deployment
         run: zip release.zip ./* -r
