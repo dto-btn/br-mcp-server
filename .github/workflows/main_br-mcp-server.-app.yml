@@ -24,14 +24,15 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Create and start virtual environment
-        run: |
-          python -m venv venv
-          source venv/bin/activate
       
       - name: Install uv package manager
         run: |
           pip install uv
+
+      - name: Create and start virtual environment
+        run: |
+          uv venv
+          source venv/bin/activate
       
       - name: Install dependencies with uv
         run: |
