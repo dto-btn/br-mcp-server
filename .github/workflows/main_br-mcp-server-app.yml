@@ -24,10 +24,6 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install system dependencies
-        run: |
-            sudo apt-get update
-            sudo apt-get install -y freetds-dev gcc libkrb5-dev
       - name: Install uv package manager
         run: |
           pip install uv
@@ -39,7 +35,7 @@ jobs:
       
       - name: Install dependencies with uv
         run: |
-          uv pip install --binary pymssql -e .
+          uv pip install pymssql -e .
           
       - name: Zip artifact for deployment
         run: zip release.zip ./* -r
