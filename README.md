@@ -1,4 +1,4 @@
-# mcp-server-demo
+# Business Request Server
 Demo PoC MCP server to be used in other PoC
 
 ## Devs
@@ -80,6 +80,23 @@ export CFLAGS="-I$(brew --prefix freetds)/include"
 export LDFLAGS="-L$(brew --prefix freetds)/lib"
 uv pip install "packaging>=24" "setuptools>=54.0" "setuptools_scm[toml]>=8.0" "wheel>=0.36.2" "Cython==3.0.10" "tomli"
 uv pip install --pre --no-binary :all: pymssql --no-cache --no-build-isolation
+```
+## Deployment
+
+### CI/CD
+
+TODO
+
+### Manual
+
+This is how you can deploy manually in Azure via the CLI.
+
+```bash
+az webapp deployment source config-local-git \
+  --name <WebAppName> \
+  --resource-group <ResourceGroupName>
+git remote add azure <GitURLFromPreviousStep>
+git push azure main
 ```
 
 ## Documentation

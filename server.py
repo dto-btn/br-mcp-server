@@ -4,21 +4,16 @@ import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Union
+from typing import Optional
 
 import pandas as pd
 from dotenv import load_dotenv
-from mcp.server.auth.provider import OAuthAuthorizationServerProvider
-from mcp.server.auth.settings import AuthSettings
 from mcp.server.fastmcp import Context, FastMCP
 from mcp.server.fastmcp.prompts.base import Message
-from pydantic import BaseModel, ValidationError
 
-from auth.provider import MSAuthProvider
 from business_request.br_fields import BRFields
 from business_request.br_models import BRQuery, FilterParams
-from business_request.br_prompts import (BITS_SYSTEM_PROMPT_EN,
-                                         BITS_SYSTEM_PROMPT_FR)
+from business_request.br_prompts import BITS_SYSTEM_PROMPT_EN, BITS_SYSTEM_PROMPT_FR
 from business_request.br_statuses_cache import StatusesCache
 from business_request.br_utils import get_br_query
 from business_request.database import DatabaseConnection
