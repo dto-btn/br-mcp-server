@@ -24,18 +24,18 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Create and start virtual environment
+        run: |
+          python -m venv --copies antenv
+          source antenv/bin/activate
       - name: Install uv package manager
         run: |
           pip install uv
-
-      - name: Create and start virtual environment
-        run: |
-          uv venv
-          source .venv/bin/activate
       
-      - name: Install dependencies with uv
+      - name: Install dependencies with pip
         run: |
-          uv pip install -e .
+          uv export --format requirements-txt --no-hashes --output-file requirements.txt
+          pip install -r requirements.txt
           
       - name: Zip artifact for deployment
         run: zip release.zip ./* -r
