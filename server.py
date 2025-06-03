@@ -291,9 +291,9 @@ def get_br_page(page: int, ctx: Context) -> dict:
     return {"page": page, "page_size": page_size, "results": data[start:end]}
 
 if __name__ == "__main__":
-    http_stream_app = ProxyHeadersMiddleware(mcp.streamable_http_app("/mcp"), trusted_hosts=["*"])
+    http_stream_app = ProxyHeadersMiddleware(mcp.http_app("/mcp"), trusted_hosts=[os.getenv("TRUSTED_HOST", "localhost")])
     import uvicorn
     uvicorn.run(http_stream_app,
-                host="127.0.0.1",
-                port=8000,
+                host="0.0.0.0",
+                port=int(os.environ.get("PORT", 8000)),
                 log_level="debug")
