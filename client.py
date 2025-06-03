@@ -36,7 +36,7 @@ load_dotenv()
 token_provider = get_bearer_token_provider(DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default")
 azure_openai_uri        = os.getenv("AZURE_OPENAI_ENDPOINT")
 api_version             = os.getenv("AZURE_OPENAI_VERSION", "2024-05-01-preview")
-mcp_server_url         = os.getenv("MCP_SERVER_URL", "http://localhost:8000")
+mcp_server_url          = os.getenv("MCP_SERVER_URL", "http://localhost:8000")
 
 aoi = AzureOpenAI(
     api_version=api_version,

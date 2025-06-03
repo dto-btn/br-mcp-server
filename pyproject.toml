@@ -6,8 +6,8 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "azure-identity>=1.23.0",
-    "fastmcp>=2.3.0",
-    "mcp[cli]>=1.8.0",
+    "fastmcp>=2.6.0",
+    "mcp[cli]>=1.9.2",
     "openai>=1.81.0",
     "pandas>=2.2.3",
     "pymssql>=2.3.4",
