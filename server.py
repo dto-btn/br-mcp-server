@@ -8,7 +8,7 @@ from typing import Optional
 
 import pandas as pd
 from dotenv import load_dotenv
-from mcp.server.fastmcp import Context, FastMCP
+from fastmcp import Context, FastMCP
 from mcp.server.fastmcp.prompts.base import Message
 
 from business_request.br_fields import BRFields
@@ -290,4 +290,8 @@ def get_br_page(page: int, ctx: Context) -> dict:
     return {"page": page, "page_size": page_size, "results": data[start:end]}
 
 if __name__ == "__main__":
-    mcp.run(transport="streamable-http") # supported since 2.3.0
+    mcp.run(transport="streamable-http",
+            host="0.0.0.0",
+            port=8000,
+            path="/mcp",
+            log_level="debug") # supported since 2.3.0
