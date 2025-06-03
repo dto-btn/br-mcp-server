@@ -101,7 +101,7 @@ class MCPClient:
                         },
                     },
                 }
-                for tool in response.tools
+                for tool in response
                 if tool.name != "get_business_requests_context"
             ]
 
@@ -159,10 +159,11 @@ class MCPClient:
 
                 if query.lower() == "context":
                     # Get context from the server
-                    result = await self.client.call_tool('get_business_requests_context', {})
-                    result = json.loads(result.content[0].text)
-                    if 'metadata' in result:
-                        print("\nContext: \n", result['metadata'])
+                    async with self.client:
+                        result = await self.client.call_tool('get_business_requests_context', {})
+                        result = json.loads(result.content[0].text)
+                        if 'metadata' in result:
+                            print("\nContext: \n", result['metadata'])
                     continue
 
                 response = await self.process_query(query)

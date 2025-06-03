@@ -172,7 +172,7 @@ def valid_search_fields() -> dict:
             'description': value.get('description', ''),
             'is_user_field': value.get('is_user_field', False)
         }
-        for key, value in BRFields.valid_search_fields_no_statuses.items()
+        for key, value in BRFields.valid_search_fields_filterable.items()
     }
 
     return {
