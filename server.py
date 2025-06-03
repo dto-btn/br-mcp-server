@@ -17,6 +17,7 @@ from business_request.br_prompts import BITS_SYSTEM_PROMPT_EN, BITS_SYSTEM_PROMP
 from business_request.br_statuses_cache import StatusesCache
 from business_request.br_utils import get_br_query
 from business_request.database import DatabaseConnection
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 # Load environment variables from .env file
 load_dotenv()
@@ -290,8 +291,9 @@ def get_br_page(page: int, ctx: Context) -> dict:
     return {"page": page, "page_size": page_size, "results": data[start:end]}
 
 if __name__ == "__main__":
-    mcp.run(transport="streamable-http",
-            host="0.0.0.0",
-            port=8000,
-            path="/mcp",
-            log_level="debug") # supported since 2.3.0
+    http_stream_app = ProxyHeadersMiddleware(mcp.streamable_http_app("/mcp"), trusted_hosts=["*"])
+    import uvicorn
+    uvicorn.run(http_stream_app,
+                host="127.0.0.1",
+                port=8000,
+                log_level="debug")
