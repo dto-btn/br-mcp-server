@@ -293,15 +293,12 @@ def get_br_page(page: int, ctx: Context) -> dict:
 
 if __name__ == "__main__":
     # fix from https://github.com/jlowin/fastmcp/issues/435#issuecomment-2888502679
-    # app = mcp.http_app(path="/mcp", transport="streamable-http")
-    # app = ProxyHeadersMiddleware(app,
-    #                             trusted_hosts=[os.getenv("TRUSTED_HOST", "*")])
-    # import uvicorn
-    # uvicorn.run(app,
-    #             host="0.0.0.0",
-    #             port=int(os.environ.get("PORT", 8000)),
-    #             log_level="debug")
-    mcp.run(transport="streamable-http",
-            host="127.0.0.1",
-            port=int(os.environ.get("PORT", 8000)),
-            log_level="debug")
+    app = mcp.http_app(path="/mcp", transport="streamable-http")
+    app = ProxyHeadersMiddleware(app,
+                                trusted_hosts=[os.getenv("TRUSTED_HOST", "*")])
+    import uvicorn
+    uvicorn.run(app,
+                host=os.environ.get("HOST", "0.0.0.0"),
+                port=int(os.environ.get("PORT", 8000)),
+                log_level="debug")
+
