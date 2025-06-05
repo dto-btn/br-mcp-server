@@ -10,14 +10,15 @@ import pandas as pd
 from dotenv import load_dotenv
 from fastmcp import Context, FastMCP
 from mcp.server.fastmcp.prompts.base import Message
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from business_request.br_fields import BRFields
 from business_request.br_models import BRQuery, FilterParams
-from business_request.br_prompts import BITS_SYSTEM_PROMPT_EN, BITS_SYSTEM_PROMPT_FR
+from business_request.br_prompts import (BITS_SYSTEM_PROMPT_EN,
+                                         BITS_SYSTEM_PROMPT_FR)
 from business_request.br_statuses_cache import StatusesCache
 from business_request.br_utils import get_br_query
 from business_request.database import DatabaseConnection
-from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 # Load environment variables from .env file
 load_dotenv()
@@ -291,9 +292,16 @@ def get_br_page(page: int, ctx: Context) -> dict:
     return {"page": page, "page_size": page_size, "results": data[start:end]}
 
 if __name__ == "__main__":
-    http_stream_app = ProxyHeadersMiddleware(mcp.http_app("/mcp"), trusted_hosts=[os.getenv("TRUSTED_HOST", "localhost")])
-    import uvicorn
-    uvicorn.run(http_stream_app,
-                host="0.0.0.0",
-                port=int(os.environ.get("PORT", 8000)),
-                log_level="debug")
+    # fix from https://github.com/jlowin/fastmcp/issues/435#issuecomment-2888502679
+    # app = mcp.http_app(path="/mcp", transport="streamable-http")
+    # app = ProxyHeadersMiddleware(app,
+    #                             trusted_hosts=[os.getenv("TRUSTED_HOST", "*")])
+    # import uvicorn
+    # uvicorn.run(app,
+    #             host="0.0.0.0",
+    #             port=int(os.environ.get("PORT", 8000)),
+    #             log_level="debug")
+    mcp.run(transport="streamable-http",
+            host="127.0.0.1",
+            port=int(os.environ.get("PORT", 8000)),
+            log_level="debug")
