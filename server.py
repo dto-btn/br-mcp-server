@@ -53,6 +53,7 @@ mcp = FastMCP("Business Requests",
               version="1.0.0",
               lifespan=server_lifespan,
               dependencies=["pydantic", "pandas"], # Add any dependencies your server needs
+              stateless_http=True, # fix from https://github.com/jlowin/fastmcp/issues/435#issuecomment-2888502679
             #   auth_server_provider=MSAuthProvider(),
             #   auth=AuthSettings(
             #       issuer_url="https://auth.example.com",
@@ -292,13 +293,7 @@ def get_br_page(page: int, ctx: Context) -> dict:
     return {"page": page, "page_size": page_size, "results": data[start:end]}
 
 if __name__ == "__main__":
-    # fix from https://github.com/jlowin/fastmcp/issues/435#issuecomment-2888502679
-    app = mcp.http_app(path="/mcp", transport="streamable-http")
-    app = ProxyHeadersMiddleware(app,
-                                trusted_hosts=[os.getenv("TRUSTED_HOST", "*")])
-    import uvicorn
-    uvicorn.run(app,
-                host=os.environ.get("HOST", "0.0.0.0"),
+    mcp.run(transport="streamable-http", host=os.environ.get("HOST", "0.0.0.0"),
                 port=int(os.environ.get("PORT", 8000)),
                 log_level="debug")
 
