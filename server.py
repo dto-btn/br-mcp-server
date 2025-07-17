@@ -8,14 +8,14 @@ from typing import Optional
 
 import pandas as pd
 from dotenv import load_dotenv
-from fastmcp import Context, FastMCP
+from fastmcp import Context
+from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.prompts.base import Message
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from business_request.br_fields import BRFields
 from business_request.br_models import BRQuery, FilterParams
-from business_request.br_prompts import (BITS_SYSTEM_PROMPT_EN,
-                                         BITS_SYSTEM_PROMPT_FR)
+from business_request.br_prompts import BITS_SYSTEM_PROMPT_EN, BITS_SYSTEM_PROMPT_FR
 from business_request.br_statuses_cache import StatusesCache
 from business_request.br_utils import get_br_query
 from business_request.database import DatabaseConnection
@@ -293,7 +293,6 @@ def get_br_page(page: int, ctx: Context) -> dict:
     return {"page": page, "page_size": page_size, "results": data[start:end]}
 
 if __name__ == "__main__":
-    mcp.run(transport="streamable-http", host=os.environ.get("HOST", "0.0.0.0"),
-                port=int(os.environ.get("PORT", 8000)),
-                log_level="debug")
-
+    mcp.run(host=os.environ.get("HOST", "0.0.0.0"),
+            port=int(os.environ.get("PORT", 8000)),
+            log_level="debug")
