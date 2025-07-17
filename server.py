@@ -8,10 +8,8 @@ from typing import Optional
 
 import pandas as pd
 from dotenv import load_dotenv
-from fastmcp import Context
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP, Context
 from mcp.server.fastmcp.prompts.base import Message
-from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from business_request.br_fields import BRFields
 from business_request.br_models import BRQuery, FilterParams
