@@ -20,7 +20,7 @@ def get_br_query(br_number_count: int = 0,
                 br_filters: Optional[List[BRQueryFilter]] = None,
                 select_fields: Optional[BRSelectFields] = None,
                 show_all: bool = False) -> str:
-    """Function that will build the select statement for retreiving BRs
+    """Function that will build the select statement for retrieving BRs
     
     Parameters order for the execute query should be as follow:
     
