@@ -7,15 +7,10 @@ class BRFields:
         'BR_OWNER': { 'db_field': 'opis.BR_OWNER', 'description': 'The OPI responsible for the BR. Typically a Service Delivery Manager. OPI means Office of Primary Interest.', 'is_user_field': True, 'en': 'BR OWNER', 'fr': 'Responsable de la DO'},
     }
 
-    status = {
-        'BITS_STATUS_EN': { 'db_field': 's.DISP_STATUS_EN', 'description': 'The current BITS BR status. Status denoting where in the EBIDM process the BR is currently.', 'en': 'Status', 'fr': 'Statut'},
-        'BITS_STATUS_FR': { 'db_field': 's.DISP_STATUS_FR', 'description': 'Statut BITS BR.', 'en': 'Status', 'fr': 'Statut'},
-    }
-
-    active = {
-        'BR_ACTIVE_EN': { 'db_field': 's.BR_ACTIVE_EN', 'description': 'Indicates if the BR is active.', 'en': 'Active', 'fr': 'Actif' },
-        'BR_ACTIVE_FR': { 'db_field': 's.BR_ACTIVE_FR', 'description': 'Indique si la BR est active.', 'en': 'Active', 'fr': 'Actif' },
-    }
+    # active = {
+    #     'BR_ACTIVE_EN': { 'db_field': 's.BR_ACTIVE_EN', 'description': 'Indicates if the BR is active.', 'en': 'Active', 'fr': 'Actif' },
+    #     'BR_ACTIVE_FR': { 'db_field': 's.BR_ACTIVE_FR', 'description': 'Indique si la BR est active.', 'en': 'Active', 'fr': 'Actif' },
+    # }
 
     date_fields = {
         'REQST_IMPL_DATE': { 'db_field': 'br.REQST_IMPL_DATE', 'description': 'The date requested by partner/client to have BR implementation completed. CRID acronym.', 'en': 'Client Requested Implementation Date', 'fr': 'Date de mise en oeuvre demandée'},
@@ -30,8 +25,12 @@ class BRFields:
     }
 
     base_fields = {
-        'LEAD_PRODUCT_EN': { 'db_field': 'products.PROD_DESC_EN', 'description': 'Lead Product', 'en': 'Lead Product', 'fr': 'Produit principal' },
-        'LEAD_PRODUCT_FR': { 'db_field': 'products.PROD_DESC_FR', 'description': 'Produit principal', 'en': 'Lead Product', 'fr': 'Produit principal' },
+        'BITS_STATUS_EN': { 'db_field': 's.DISP_STATUS_EN', 'description': 'The current BITS BR status. Status denoting where in the EBIDM process the BR is currently.', 'en': 'Status', 'fr': 'Statut'},
+        'BITS_STATUS_FR': { 'db_field': 's.DISP_STATUS_FR', 'description': 'Statut BITS BR.', 'en': 'Status', 'fr': 'Statut'},
+        'LEAD_PRODUCT_EN': { 'db_field': 'pl.PROD_DESC_EN', 'description': 'Lead Product', 'en': 'Lead Product', 'fr': 'Produit principal' },
+        'LEAD_PRODUCT_FR': { 'db_field': 'pl.PROD_DESC_FR', 'description': 'Produit principal', 'en': 'Lead Product', 'fr': 'Produit principal' },
+        'PRODUCTS_EN': { 'db_field': 'pl.PRODUCTS_EN', 'description': 'Products', 'en': 'Products', 'fr': 'Produits' },
+        'PRODUCTS_FR': { 'db_field': 'pl.PRODUCTS_FR', 'description': 'Produit principal', 'en': 'Lead Product', 'fr': 'Produits' },
         'BR_SHORT_TITLE': { 'db_field': 'br.BR_SHORT_TITLE', 'description': 'Title which relates to the Business Request (BR).', 'en': 'Title', 'fr': 'Titre' },
         'RPT_GC_ORG_NAME_EN': { 'db_field': 'br.RPT_GC_ORG_NAME_EN', 'description': 'Primary partner/client requesting the Business Request/service (BR)', 'en': 'Client Name', 'fr': 'Client' },
         'RPT_GC_ORG_NAME_FR': { 'db_field': 'br.RPT_GC_ORG_NAME_FR', 'description': 'Partenaire/client principal', 'en': 'Client Name', 'fr': 'Client' },
@@ -73,6 +72,7 @@ class BRFields:
         'PROD_OPI': { 'db_field': 'opis.PROD_OPI', 'description': 'The Service Lead for the BR.', 'is_user_field': True, 'en': 'Service Lead', 'fr': 'BPR des services' },
         'PHASE_EN': { 'db_field': 's.BITS_PHASE_EN', 'description': 'The current phase of the BR. Phase denotes where in the EBIDM process the BR is currently.', 'en': 'Phase', 'fr': 'Phase' },
         'PHASE_FR': { 'db_field': 's.BITS_PHASE_EN', 'description': 'Phase de la BR.', 'en': 'Phase', 'fr': 'Phase' },
+        'SOLN_OPI': { 'db_field': 'opis.SOLN_OPI', 'description': 'Conceptual Designer', 'is_user_field': True, 'en': 'Conceptual Designer', 'fr': 'Créateur Conceptuel' },
     }
     # pylint: enable=line-too-long
 
@@ -83,5 +83,4 @@ class BRFields:
     valid_search_fields.update(date_fields)
 
     valid_search_fields_filterable = valid_search_fields.copy()
-    valid_search_fields.update(status)
-    valid_search_fields.update(active)
+    # valid_search_fields.update(active)
