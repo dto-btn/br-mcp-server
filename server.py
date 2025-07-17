@@ -94,7 +94,7 @@ async def search_business_requests(query: BRQuery, select_fields: BRSelectFields
     result["brquery"] = query.model_dump()
     result["brselect"] = fields.model_dump()
     ctx.request_context.lifespan_context.results = result
-    return f"Ran the query sucessfully, here is the metadata results from running this query: {result['metadata']}"
+    return f"Ran the query successfully, here is the metadata results from running this query: {result['metadata']}"
 
 @mcp.tool(description="""Returns Business Request(s) (BR) information.
           Can be invoked for one OR many BR numbers at the same time.
