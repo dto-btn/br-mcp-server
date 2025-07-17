@@ -28,7 +28,7 @@ logger.setLevel(logging.DEBUG)
 class BRContext:
     """Context for Business Request operations"""
     database: DatabaseConnection
-    results: Optional[str] = None
+    results: Optional[dict] = None
 
 @asynccontextmanager
 async def server_lifespan(server: FastMCP) -> AsyncIterator[BRContext]:
@@ -105,7 +105,7 @@ def get_br_by_number(br_numbers: list[int], ctx: Context) -> dict:
     return result
 
 @mcp.tool()
-def get_business_requests_context(ctx: Context) -> str:
+def get_business_requests_context(ctx: Context) -> dict:
     """Returns the context of the business requests"""
     # Check if results are available in the context
     if ctx.request_context.lifespan_context.results:
