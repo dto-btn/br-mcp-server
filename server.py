@@ -75,7 +75,7 @@ async def search_business_requests(query: BRQuery, select_fields: BRSelectFields
     """
     await ctx.info(f"Validated query: {query}")
 
-    fields = ensure_query_fields_present_in_select(query.query_filters, select_fields)
+    fields = ensure_query_fields_present_in_select(br_filters=query.query_filters, select_fields=select_fields)
     # Prepare the SQL statement for this request.
     sql_query = get_br_query(limit=bool(query.limit),
                                         br_filters=query.query_filters,

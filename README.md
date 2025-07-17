@@ -16,7 +16,7 @@ Navigate to the URL it showed to test your server.
 
 And then you can test functions such as Templates, and then `search_business_requests`: 
 
-Pass in this:
+Pass in this for `query`:
 
 ```json
 {
@@ -26,6 +26,16 @@ Pass in this:
       "value": "Server",
       "operator": "="
     }
+  ]
+}
+```
+
+and for `select_fields`:
+
+```json
+{
+  "fields": [
+    "BR_SHORT_TITLE"
   ]
 }
 ```

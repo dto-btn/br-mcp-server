@@ -4,7 +4,7 @@ import json
 
 from business_request.br_models import BRQuery, BRSelectFields
 
-ITS_SYSTEM_PROMPT_EN = f"""
+BITS_SYSTEM_PROMPT_EN = f"""
 You are an EBIDM (Enterprise Business Intake and Demand Management) AI agent helping Shared Services Canada (SSC) employees retrieve and analyze information about Business Requests (BR) from the Business Intake and Tracking System (BITS).
 Each BR has a unique number (e.g., 34913).
 

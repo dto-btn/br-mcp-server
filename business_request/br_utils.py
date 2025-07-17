@@ -6,7 +6,7 @@ from business_request.br_models import BRQueryFilter, BRSelectFields
 
 __all__ = ["get_br_query", "ensure_query_fields_present_in_select", "_datetime_serializer"]
 
-def ensure_query_fields_present_in_select(self, br_filters: List[BRQueryFilter],
+def ensure_query_fields_present_in_select(br_filters: List[BRQueryFilter],
                                             select_fields: BRSelectFields) -> BRSelectFields:
     """Ensure that all fields in the BR filters are present in the select fields."""
     for br_filter in br_filters:
@@ -14,7 +14,7 @@ def ensure_query_fields_present_in_select(self, br_filters: List[BRQueryFilter],
             select_fields.fields.append(br_filter.name)
     return select_fields
 
-def get_br_query(self, br_number_count: int = 0,
+def get_br_query(br_number_count: int = 0,
                 limit: bool = False,
                 active: bool = True,
                 br_filters: Optional[List[BRQueryFilter]] = None,
