@@ -8,15 +8,15 @@ class BRQueryFilter(BaseModel):
     """Model for BRQueryFilter."""
     name: str = Field(..., description="Name of the database field", )
     value: str = Field(..., description="Value of the field")
-    operator: str = Field(..., description="Operator, must be one of '=', '<', '>', '<=' or '>='")
+    operator: str = Field(..., description="Operator, must be one of '=', '<', '>', '<=' or '>=' or '!='")
 
     # Validator for the 'operator' field
     @field_validator("operator")
     @classmethod
     def validate_operator(cls, v: str) -> str:
         """Validate the operator field."""
-        if v not in {"=", "<", ">", "<=", ">="}:
-            raise ValueError("Operator, must be one of '=', '<', '>', '<=' or '>='")
+        if v not in {"=", "<", ">", "<=", ">=", "!="}:
+            raise ValueError("Operator, must be one of '=', '<', '>', '<=' or '>=' or '!='")
         return v
 
     # Validator for the 'name' field
@@ -50,26 +50,51 @@ class BRQueryFilter(BaseModel):
 class BRQuery(BaseModel):
     """Represent the query that the AI does on behalf of the user"""
     query_filters: list[BRQueryFilter] = Field(..., description="List of filters to apply to the query.")
-    limit: int = Field(100, description="Maximum number of records to return. Optional. Defaults to 100.")
-    statuses: list[str] = Field([], description="List of of STATUS_ID to filter by.")
+    limit: int = Field(750, description="Maximum number of records to return. Optional. Defaults to 750.")
     active: bool = Field(True, description="If it should search for active BRs only, on by default.")
-
-    # Validator for the 'statuses' field
-    @field_validator("statuses")
-    @classmethod
-    def validate_statuses(cls, v: list[str]) -> list[str]:
-        """Validate the statuses field."""
-        valid_statuses = StatusesCache.get_status_ids()
-        invalid = [status for status in v if status not in valid_statuses]
-        if invalid:
-            raise ValueError(f"Invalid STATUS_ID(s): {invalid}. Must be one of: {sorted(valid_statuses)}")
-        return v
 
     def model_dump(self, *args, **kwargs):
         data = super().model_dump(*args, **kwargs)
         # Replace query_filters with label dicts
         data["query_filters"] = [f.to_label_dict() for f in self.query_filters]
         return data
+    
+class BRSelectFields(BaseModel):
+    """Fields to use for the SELECT statement in the BITS query **AND** fields that will displayed to the user."""
+    fields: list[str]= Field(..., description="""List of database field names to include in the 
+                             select statement and that will display to the user in the answer""")
+
+    # Validator for the 'fields' field
+    @field_validator("fields")
+    @classmethod
+    def validate_fields(cls, v: list[str]) -> list[str]:
+        """Validate each field name to ensure it's a valid DB field"""
+        for field in v:
+            if field not in BRFields.valid_search_fields:
+                raise ValueError(f"Field '{field}' must be one of {list(BRFields.valid_search_fields.keys())}")
+        return v
+
+    @field_validator("fields")
+    @classmethod
+    def validate_size(cls, v: list[str]) -> list[str]:
+        """Ensure the fields list is not empty and does not exceed a reasonable size."""
+        if not v:
+            raise ValueError("At least one field must be specified.")
+        if len(v) > 10:
+            raise ValueError("Too many fields specified. Maximum is 10.")
+        return v
+    
+    @field_validator("fields")
+    @classmethod
+    def validate_no_duplicates(cls, v: list[str]) -> list[str]:
+        """Ensure there are no duplicate fields in the list."""
+        if len(v) != len(set(v)):
+            raise ValueError("Duplicate fields are not allowed.")
+        return v
+
+    def model_dump(self, *args, **kwargs):
+        """Custom serialization for JSON encoding"""
+        return {"fields": self.fields}
 
 class FilterParams(BaseModel):
     """Parameters for filtering results using pandas"""

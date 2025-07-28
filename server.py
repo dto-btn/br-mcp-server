@@ -8,16 +8,14 @@ from typing import Optional
 
 import pandas as pd
 from dotenv import load_dotenv
-from fastmcp import Context, FastMCP
+from mcp.server.fastmcp import FastMCP, Context
 from mcp.server.fastmcp.prompts.base import Message
-from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from business_request.br_fields import BRFields
-from business_request.br_models import BRQuery, FilterParams
-from business_request.br_prompts import (BITS_SYSTEM_PROMPT_EN,
-                                         BITS_SYSTEM_PROMPT_FR)
+from business_request.br_models import BRQuery, BRSelectFields, FilterParams
+from business_request.br_prompts import BITS_SYSTEM_PROMPT_EN, BITS_SYSTEM_PROMPT_FR
 from business_request.br_statuses_cache import StatusesCache
-from business_request.br_utils import get_br_query
+from business_request.br_utils import ensure_query_fields_present_in_select, get_br_query
 from business_request.database import DatabaseConnection
 
 # Load environment variables from .env file
@@ -30,7 +28,7 @@ logger.setLevel(logging.DEBUG)
 class BRContext:
     """Context for Business Request operations"""
     database: DatabaseConnection
-    results: Optional[str] = None
+    results: Optional[dict] = None
 
 @asynccontextmanager
 async def server_lifespan(server: FastMCP) -> AsyncIterator[BRContext]:
@@ -53,6 +51,7 @@ mcp = FastMCP("Business Requests",
               version="1.0.0",
               lifespan=server_lifespan,
               dependencies=["pydantic", "pandas"], # Add any dependencies your server needs
+              stateless_http=True, # fix from https://github.com/jlowin/fastmcp/issues/435#issuecomment-2888502679
             #   auth_server_provider=MSAuthProvider(),
             #   auth=AuthSettings(
             #       issuer_url="https://auth.example.com",
@@ -63,26 +62,28 @@ mcp = FastMCP("Business Requests",
             )
 
 @mcp.tool(description="This tool searches information about BRs given specific BR field(s) and value(s) pairs.")
-async def search_business_requests(query: BRQuery, ctx: Context) -> dict:
+async def search_business_requests(query: BRQuery, select_fields: BRSelectFields, ctx: Context) -> dict:
     """Returns the BR database query
 
     Args:
         query: The business request query parameters
 
+        select_fields: The fields to select in the query, these are the fields that will be returned to the user
+
     Returns:
         The generated SQL query string
     """
     await ctx.info(f"Validated query: {query}")
+
+    fields = ensure_query_fields_present_in_select(br_filters=query.query_filters, select_fields=select_fields)
     # Prepare the SQL statement for this request.
     sql_query = get_br_query(limit=bool(query.limit),
                                         br_filters=query.query_filters,
-                                        active=True,
-                                        status=len(query.statuses) if query.statuses else 0)
+                                        active=query.active,
+                                        select_fields=fields)
 
     # Build query parameters dynamically, #1 statuses, #2 all other fields, #3 limit
     query_params = []
-    if query.statuses:
-        query_params.extend(query.statuses)
     for query_filter in query.query_filters:
         if query_filter.is_date():
             query_params.append(query_filter.value)
@@ -91,8 +92,9 @@ async def search_business_requests(query: BRQuery, ctx: Context) -> dict:
     query_params.append(query.limit)
     result = ctx.request_context.lifespan_context.database.execute_query(sql_query, *query_params)
     result["brquery"] = query.model_dump()
+    result["brselect"] = fields.model_dump()
     ctx.request_context.lifespan_context.results = result
-    return f"Ran the query sucessfully, here is the metadata results from running this query: {result['metadata']}"
+    return f"Ran the query successfully, here is the metadata results from running this query: {result['metadata']}"
 
 @mcp.tool(description="""Returns Business Request(s) (BR) information.
           Can be invoked for one OR many BR numbers at the same time.
@@ -106,7 +108,7 @@ def get_br_by_number(br_numbers: list[int], ctx: Context) -> dict:
     return result
 
 @mcp.tool()
-def get_business_requests_context(ctx: Context) -> str:
+def get_business_requests_context(ctx: Context) -> dict:
     """Returns the context of the business requests"""
     # Check if results are available in the context
     if ctx.request_context.lifespan_context.results:
@@ -292,13 +294,6 @@ def get_br_page(page: int, ctx: Context) -> dict:
     return {"page": page, "page_size": page_size, "results": data[start:end]}
 
 if __name__ == "__main__":
-    # fix from https://github.com/jlowin/fastmcp/issues/435#issuecomment-2888502679
-    app = mcp.http_app(path="/mcp", transport="streamable-http")
-    app = ProxyHeadersMiddleware(app,
-                                trusted_hosts=[os.getenv("TRUSTED_HOST", "*")])
-    import uvicorn
-    uvicorn.run(app,
-                host=os.environ.get("HOST", "0.0.0.0"),
-                port=int(os.environ.get("PORT", 8000)),
-                log_level="debug")
-
+    mcp.run(host=os.environ.get("HOST", "0.0.0.0"),
+            port=int(os.environ.get("PORT", 8000)),
+            log_level="debug")

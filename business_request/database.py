@@ -1,9 +1,10 @@
 import json
 import logging
 import time
-from datetime import datetime
 
 import pymssql
+
+from business_request.br_utils import _datetime_serializer
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -54,29 +55,30 @@ class DatabaseConnection:
             result = [{columns[i]: row[i] for i in range(len(columns))} for row in rows] # type: ignore
             logger.debug("Found %s results!", len(result))
 
-            total_count = next((item.get("TotalCount") for item in result if "TotalCount" in item), None)
+            extraction_date = result[0].get("EXTRACTION_DATE") if result else None
+            total_count = result[0].get("TotalCount") if result else None
+
+            # Remove both TotalCount and ExtractionDate from the result if they exist
+            cleaned_result = [
+                {k: v for k, v in item.items() if k not in ["TotalCount", "EXTRACTION_DATE", "BR_ACTIVE_EN", "BR_ACTIVE_FR"]}
+                for item in result
+            ]
 
             final_result = {
-                result_key: result,
+                result_key: cleaned_result,
                 'metadata': {
                     'execution_time': execution_time,
                     'results': len(result),
                     'total_rows': total_count,
-                    'extraction_date': result[0].get("EXTRACTION_DATE") if result else None,
+                    'extraction_date': extraction_date,
                 }
             }
 
             # Convert the result to JSON
                                                     #needed for the date serialization
-            json_result = json.dumps(final_result, default=self._datetime_serializer, indent=4)
+            json_result = json.dumps(final_result, default=_datetime_serializer, indent=4)
             return json.loads(json_result)
 
         finally:
             # Ensure the connection is closed
             conn.close()
-
-    def _datetime_serializer(self, obj):
-        """JSON serializer for datetime objects."""
-        if isinstance(obj, datetime):
-            return obj.isoformat()
-        raise TypeError(f"Type {type(obj)} not serializable")
