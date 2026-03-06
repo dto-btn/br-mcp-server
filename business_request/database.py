@@ -4,7 +4,7 @@ import time
 
 import pymssql
 
-from business_request.br_utils import _datetime_serializer
+from business_request.br_utils import _data_serializer
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -76,7 +76,7 @@ class DatabaseConnection:
 
             # Convert the result to JSON
                                                     #needed for the date serialization
-            json_result = json.dumps(final_result, default=_datetime_serializer, indent=4)
+            json_result = json.dumps(final_result, default=_data_serializer, indent=4)
             return json.loads(json_result)
 
         finally:

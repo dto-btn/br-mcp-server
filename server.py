@@ -1,15 +1,18 @@
 import json
 import logging
 import os
+
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Optional
-
-import pandas as pd
 from dotenv import load_dotenv
-from mcp.server.fastmcp import FastMCP, Context
+import pandas as pd
+
+from fastmcp import FastMCP, Context
 from mcp.server.fastmcp.prompts.base import Message
+from starlette.middleware import Middleware
+from starlette.middleware.cors import CORSMiddleware
 
 from business_request.br_fields import BRFields
 from business_request.br_models import BRQuery, BRSelectFields, FilterParams
@@ -47,19 +50,10 @@ async def server_lifespan(server: FastMCP) -> AsyncIterator[BRContext]:
         pass  # Add cleanup code here if needed
 
 # Create an MCP server with lifespan management
-mcp = FastMCP("Business Requests",
-              version="1.0.0",
-              lifespan=server_lifespan,
-              dependencies=["pydantic", "pandas"], # Add any dependencies your server needs
-              stateless_http=True, # fix from https://github.com/jlowin/fastmcp/issues/435#issuecomment-2888502679
-            #   auth_server_provider=MSAuthProvider(),
-            #   auth=AuthSettings(
-            #       issuer_url="https://auth.example.com",
-            #       client_id=os.getenv("CLIENT_ID"),
-            #       client_secret=os.getenv("CLIENT_SECRET"),
-            #       redirect_uri=os.getenv("REDIRECT_URI"),
-            #       scopes=["openid", "profile", "email"],)
-            )
+mcp = FastMCP(
+    name="Business Requests",
+    lifespan=server_lifespan
+)
 
 @mcp.tool(description="This tool searches information about BRs given specific BR field(s) and value(s) pairs.")
 async def search_business_requests(query: BRQuery, select_fields: BRSelectFields, ctx: Context) -> dict:
@@ -94,7 +88,7 @@ async def search_business_requests(query: BRQuery, select_fields: BRSelectFields
     result["brquery"] = query.model_dump()
     result["brselect"] = fields.model_dump()
     ctx.request_context.lifespan_context.results = result
-    return f"Ran the query successfully, here is the metadata results from running this query: {result['metadata']}"
+    return result
 
 @mcp.tool(description="""Returns Business Request(s) (BR) information.
           Can be invoked for one OR many BR numbers at the same time.
@@ -102,7 +96,7 @@ async def search_business_requests(query: BRQuery, select_fields: BRSelectFields
 def get_br_by_number(br_numbers: list[int], ctx: Context) -> dict:
     """Returns a BR requests by their numbers"""
     #BRs here do not need to be active to be returned
-    query = get_br_query(len(br_numbers), active=False)
+    query = get_br_query(len(br_numbers), active=False, show_all=True)
     result = ctx.request_context.lifespan_context.database.execute_query(query, *br_numbers)
     ctx.request_context.lifespan_context.results = result
     return result
@@ -174,7 +168,9 @@ def valid_search_fields() -> dict:
     fields_with_descriptions = {
         key: {
             'description': value.get('description', ''),
-            'is_user_field': value.get('is_user_field', False)
+            'is_user_field': value.get('is_user_field', False),
+            'fr_label': value.get('fr', ''),
+            'en_label': value.get('en', '')
         }
         for key, value in BRFields.valid_search_fields_filterable.items()
     }
@@ -293,7 +289,23 @@ def get_br_page(page: int, ctx: Context) -> dict:
     end = start + page_size
     return {"page": page, "page_size": page_size, "results": data[start:end]}
 
+middleware = [
+    Middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+        allow_headers=[
+            "mcp-protocol-version",
+            "mcp-session-id",
+            "Authorization",
+            "Content-Type",
+        ],
+        expose_headers=["mcp-session-id"],
+    )
+]
+
 if __name__ == "__main__":
-    mcp.run(host=os.environ.get("HOST", "0.0.0.0"),
-            port=int(os.environ.get("PORT", 8000)),
-            log_level="debug")
+    mcp.run(
+        transport="http",
+        middleware=middleware,
+    )

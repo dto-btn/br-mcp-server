@@ -1,10 +1,11 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import List, Optional
 
 from business_request.br_fields import BRFields
 from business_request.br_models import BRQueryFilter, BRSelectFields
 
-__all__ = ["get_br_query", "ensure_query_fields_present_in_select", "_datetime_serializer"]
+__all__ = ["get_br_query", "ensure_query_fields_present_in_select", "_data_serializer"]
 
 def ensure_query_fields_present_in_select(br_filters: List[BRQueryFilter],
                                             select_fields: BRSelectFields) -> BRSelectFields:
@@ -199,8 +200,10 @@ def get_br_query(br_number_count: int = 0,
     """
     return query
 
-def _datetime_serializer(obj):
-    """JSON serializer for datetime objects."""
+def _data_serializer(obj):
+    """JSON serializer for datetime and decimal objects."""
     if isinstance(obj, datetime):
         return obj.isoformat()
+    if isinstance(obj, Decimal):
+        return float(obj)
     raise TypeError(f"Type {type(obj)} not serializable")
