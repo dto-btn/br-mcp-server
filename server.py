@@ -55,7 +55,15 @@ mcp = FastMCP(
     lifespan=server_lifespan
 )
 
-@mcp.tool(description="This tool searches information about BRs given specific BR field(s) and value(s) pairs.")
+@mcp.tool(description="""This tool searches for Business Requests (BRs) based on specific fields (e.g. SUBMIT_DATE, RPT_GC_ORG_NAME_EN, BR_SHORT_TITLE).
+
+REQUIRED BEHAVIOR:
+1. ALWAYS use internal field names (e.g. 'SUBMIT_DATE', not 'SUBMISSION_DATE').
+2. Do NOT use this tool to search by BR Number. Use 'get_br_by_number' for that.
+3. Use 'BR_SHORT_TITLE' to search by title (NOT 'BR_TITLE' or 'TITLE').
+4. If you encounter a ValidationError, parse the 'Name must be one of...' list in the error and IMMEDIATELY retry with the correct field name.
+
+DO NOT GUESS FIELD NAMES. Use 'valid_search_fields' if unsure.""")
 async def search_business_requests(query: BRQuery, select_fields: BRSelectFields, ctx: Context) -> dict:
     """Returns the BR database query
 
@@ -160,7 +168,8 @@ def get_organization_names(ctx: Context) -> dict:
 @mcp.tool(description="""Use this function to list all the valid search fields.
           This can be used to get the field names that are available to search for BRs.
           French and english label are included. The user might use the labels to see what fields the users are
-          refering to when they use language instead of directly typing the field names.""")
+          refering to when they use language instead of directly typing the field names.
+          Always call this function if you encounter a ValidationError when using search_business_requests.""")
 def valid_search_fields() -> dict:
     """
     This function returns all the valid search fields
