@@ -3,9 +3,21 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /app
 
-# Install curl for downloading UV, then clean up after installation
+# Install system dependencies
 RUN apt-get update && \
-    apt-get install -y build-essential freetds-dev freetds-bin unixodbc-dev libssl-dev libkrb5-dev && \
+    apt-get install -y --no-install-recommends \
+    curl \
+    gnupg2 \
+    ca-certificates \
+    build-essential \
+    unixodbc-dev \
+    libssl-dev \
+    libkrb5-dev && \
+    # Install Microsoft ODBC Driver 18 for SQL Server
+    curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /usr/share/keyrings/microsoft-prod.gpg && \
+    curl https://packages.microsoft.com/config/debian/12/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
+    apt-get update && \
+    ACCEPT_EULA=Y apt-get install -y msodbcsql18 && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy pyproject.toml and install dependencies with UV
@@ -15,10 +27,7 @@ COPY pyproject.toml ./
 RUN uv venv .venv
 ENV PATH="/app/.venv/bin:$PATH"
 
-# TEMP FIX FOR CYTHON 3.1.0
-RUN uv pip install "packaging>=24" "setuptools>=54.0" "setuptools_scm[toml]>=8.0" "wheel>=0.36.2" "Cython==3.0.10" "tomli"
-RUN uv pip install --pre --no-binary :all: pymssql --no-cache --no-build-isolation
-
+# Install project dependencies (including pyodbc)
 RUN uv pip install -e .
 
 # Copy your server script, business_request module, and environment files

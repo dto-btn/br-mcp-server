@@ -1,8 +1,9 @@
 import json
 import logging
 import time
+import os
 
-import pymssql
+import pyodbc
 
 from business_request.br_utils import _data_serializer
 
@@ -11,16 +12,36 @@ logger.setLevel(logging.INFO)
 
 class DatabaseConnection:
     """Database connection class."""
-    def __init__(self, server, username, password, database):
-        self.server = server
+    def __init__(self, server, username, password, database, port=None):
+        # Handle cases where port is included in the server string (e.g., server.database.windows.net:1433)
+        if ":" in server:
+            self.server, port_from_server = server.split(":")
+            self.port = int(port_from_server)
+        else:
+            self.server = server
+            self.port = int(port) if port else 1433
+            
         self.username = username
         self.password = password
         self.database = database
+        # Use ODBC Driver 18 as default for modern Azure SQL connections
+        self.driver = os.getenv("ODBC_DRIVER", "{ODBC Driver 18 for SQL Server}")
 
     def get_conn(self):
-        """Get the database connection."""
-        logger.debug("requesting connection to database to --> %s", self.server)
-        return pymssql.connect(server=self.server, user=self.username, password=self.password, database=self.database)  # pylint: disable=no-member
+        """Get the database connection using pyodbc."""
+        logger.debug("Requesting connection to %s:%s via %s", self.server, self.port, self.driver)
+        
+        conn_str = (
+            f"DRIVER={self.driver};"
+            f"SERVER={self.server},{self.port};"
+            f"DATABASE={self.database};"
+            f"UID={self.username};"
+            f"PWD={self.password};"
+            "Encrypt=yes;"
+            "TrustServerCertificate=no;"
+            "Connection Timeout=30;"
+        )
+        return pyodbc.connect(conn_str)
 
     def execute_query(self, query, *args, result_key='br') -> dict:
         """
@@ -29,7 +50,12 @@ class DatabaseConnection:
         The returned content will always be in JSON format with items as column values
         """
         # Get the database connection
-        conn = self.get_conn()
+        try:
+            conn = self.get_conn()
+        except pyodbc.Error as e:
+            logger.error("Failed to connect to the database: %s", e)
+            raise
+
         cursor = conn.cursor()
 
         try:

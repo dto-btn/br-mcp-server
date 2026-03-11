@@ -91,7 +91,11 @@ async def search_business_requests(query: BRQuery, select_fields: BRSelectFields
             query_params.append(query_filter.value)
         else:
             query_params.append(f"%{query_filter.value}%")
-    query_params.append(query.limit)
+    
+    # Only append limit if it's explicitly set to a value > 0 and the query actually uses TOP()
+    if query.limit and query.limit > 0:
+        query_params.append(query.limit)
+        
     result = ctx.request_context.lifespan_context.database.execute_query(sql_query, *query_params)
     result["brquery"] = query.model_dump()
     result["brselect"] = fields.model_dump()

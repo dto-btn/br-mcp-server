@@ -166,8 +166,8 @@ def get_br_query(br_number_count: int = 0,
         base_where_clause.append("s.BR_ACTIVE_EN = 'Active'")
 
     if br_number_count:
-        # Prevents SQL injection, this only calculates the placehoders ... i.e; BR_NMBR IN (%s, %s, %s)
-        placeholders = ", ".join(["%s"] * br_number_count)
+        # Prevents SQL injection, this only calculates the placehoders ... i.e; BR_NMBR IN (?, ?, ?)
+        placeholders = ", ".join(["?"] * br_number_count)
         base_where_clause.append(f"br.BR_NMBR IN ({placeholders})")
 
     if br_filters:
@@ -176,11 +176,11 @@ def get_br_query(br_number_count: int = 0,
             if field_name:
                 if br_filter.is_date():
                     # Handle date fields
-                    base_where_clause.append(f"CONVERT(DATE, {field_name['db_field']}) {br_filter.operator} %s")
+                    base_where_clause.append(f"CONVERT(DATE, {field_name['db_field']}) {br_filter.operator} ?")
                 else:
                     # Handle other fields, defaulting to LIKE operator since they are mostly strings ...
                     _op = "LIKE" if br_filter.operator != '!=' else "NOT LIKE"
-                    base_where_clause.append(f"{field_name['db_field']} {_op} %s")
+                    base_where_clause.append(f"{field_name['db_field']} {_op} ?")
 
     if base_where_clause:
         query += "WHERE " + " AND ".join(base_where_clause)
@@ -190,7 +190,7 @@ def get_br_query(br_number_count: int = 0,
     SELECT {top} *,
         COUNT(*) OVER() AS TotalCount
     FROM FilteredResults
-    """.replace("{top}", "TOP(%d)" if limit else "")
+    """.replace("{top}", "TOP(?)" if limit else "")
 
     # ORDER BY clause
     query += """
