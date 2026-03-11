@@ -22,6 +22,8 @@ Edit `.env` and provide your database credentials and Azure OpenAI settings.
 | `HOST` | The host address the MCP server will bind to. | No | `0.0.0.0` |
 | `PORT` | The port the MCP server will listen on. | No | `8000` |
 | `MCP_SERVER_URL` | The URL where the MCP server is accessible (used by client). | No | `http://127.0.0.1:8000/mcp` |
+| `CORS_ALLOW_ORIGINS` | Comma-separated list of origins allowed to bridge to the MCP server. | No | `http://localhost,http://127.0.0.1` |
+| `CORS_ALLOW_CREDENTIALS` | Whether to allow credentials (cookies, auth headers) in CORS requests. | No | `false` |
 | `AZURE_OPENAI_ENDPOINT`| The endpoint URI for your Azure OpenAI resource (used by client). | Yes (Client) | - |
 | `AZURE_OPENAI_VERSION` | The API version for Azure OpenAI. | No | `2024-05-01-preview` |
 | `CLIENT_ID` | OAuth2 Client ID for authentication (experimental). | No | - |

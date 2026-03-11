@@ -68,7 +68,6 @@ target/
 
 # dotenv environment variables file
 .env
-.env.*
 
 # Uvicorn-specific logs and files
 *.log

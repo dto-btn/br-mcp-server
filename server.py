@@ -298,10 +298,31 @@ def get_br_page(page: int, ctx: Context) -> dict:
     end = start + page_size
     return {"page": page, "page_size": page_size, "results": data[start:end]}
 
+# Attach permissive CORS so browsers can connect directly without preflight/CORS errors
+CORS_ORIGINS_RAW = os.getenv("CORS_ALLOW_ORIGINS", "")
+CORS_ALLOW_CREDENTIALS = os.getenv("CORS_ALLOW_CREDENTIALS", "false").strip().lower() in {
+    "1", "true", "yes", "on"
+}
+
+if CORS_ORIGINS_RAW:
+    CORS_ORIGINS = [
+        origin.strip() for origin in CORS_ORIGINS_RAW.split(",") if origin.strip()
+    ]
+else:
+    CORS_ORIGINS = ["http://localhost", "http://127.0.0.1"]
+
+# CORS spec safety: wildcard origins cannot be used with credentials.
+if "*" in CORS_ORIGINS and CORS_ALLOW_CREDENTIALS:
+    logging.warning(
+        "CORS_ALLOW_CREDENTIALS=true is incompatible with wildcard origins; "
+        "forcing credentials off."
+    )
+    CORS_ALLOW_CREDENTIALS = False
+
 middleware = [
     Middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=CORS_ORIGINS,
         allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
         allow_headers=[
             "mcp-protocol-version",
@@ -310,6 +331,7 @@ middleware = [
             "Content-Type",
         ],
         expose_headers=["mcp-session-id"],
+        allow_credentials=CORS_ALLOW_CREDENTIALS,
     )
 ]
 
