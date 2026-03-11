@@ -62,6 +62,7 @@ REQUIRED BEHAVIOR:
 2. Do NOT use this tool to search by BR Number. Use 'get_br_by_number' for that.
 3. Use 'BR_SHORT_TITLE' to search by title (NOT 'BR_TITLE' or 'TITLE').
 4. If you encounter a ValidationError, parse the 'Name must be one of...' list in the error and IMMEDIATELY retry with the correct field name.
+5. This tool returns the 'metadata' of the search results. Use this metadata to understand the scope (counts, available columns, paging info), then use other tools such as 'filter_results', 'get_br_fields', or 'get_br_page' to retrieve or narrow the actual records.
 
 DO NOT GUESS FIELD NAMES. Use 'valid_search_fields' if unsure.""")
 async def search_business_requests(query: BRQuery, select_fields: BRSelectFields, ctx: Context) -> dict:
@@ -100,7 +101,7 @@ async def search_business_requests(query: BRQuery, select_fields: BRSelectFields
     result["brquery"] = query.model_dump()
     result["brselect"] = fields.model_dump()
     ctx.request_context.lifespan_context.results = result
-    return result
+    return result['metadata']
 
 @mcp.tool(description="""Returns Business Request(s) (BR) information.
           Can be invoked for one OR many BR numbers at the same time.

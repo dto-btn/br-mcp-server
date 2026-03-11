@@ -63,7 +63,8 @@ class DatabaseConnection:
             # Start timing the query execution
             start_time = time.time()
 
-            cursor.execute(query, args)
+            # Pass parameters as separate arguments to pyodbc.execute
+            cursor.execute(query, *args)
             rows = cursor.fetchall()
 
             # End timing the query execution
