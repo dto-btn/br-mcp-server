@@ -107,8 +107,9 @@ async def search_business_requests(query: BRQuery, select_fields: BRSelectFields
 @mcp.tool(description="""Returns Business Request(s) (BR) information.
           Can be invoked for one OR many BR numbers at the same time.
           I.e; Give me BR info for 12345, 32456 and 66123. Should only invoke this function once""")
-def get_br_by_number(br_numbers: list[int], ctx: Context) -> dict:
+async def get_br_by_number(br_numbers: list[int], ctx: Context) -> dict:
     """Returns a BR requests by their numbers"""
+    await ctx.info(f"Getting BRs by numbers: {br_numbers}")
     #BRs here do not need to be active to be returned
     query = get_br_query(len(br_numbers), active=False, show_all=True)
     result = ctx.request_context.lifespan_context.database.execute_query(query, *br_numbers)
@@ -116,8 +117,9 @@ def get_br_by_number(br_numbers: list[int], ctx: Context) -> dict:
     return result
 
 @mcp.tool()
-def get_business_requests_context(ctx: Context) -> dict:
+async def get_business_requests_context(ctx: Context) -> dict:
     """Returns the context of the business requests"""
+    await ctx.info("Retrieving business requests context")
     # Check if results are available in the context
     if ctx.request_context.lifespan_context.results:
         return ctx.request_context.lifespan_context.results
@@ -161,10 +163,11 @@ def get_br_statuses_and_phases() -> dict:
           This can be invoked when a user is searching for BRs by a client name but is using the acronym.
           Example: Search for BRs with clients PC.
           You would resolve it to Parks Canada and search for RPT_GC_ORG_NAME_EN = Parks Canada.""")
-def get_organization_names(ctx: Context) -> dict:
+async def get_organization_names(ctx: Context) -> dict:
     """
     This will retreive organization so AI can look them up.
     """
+    await ctx.info("Retrieving organization names")
     query = """
     SELECT GC_ORG_NAME_EN, GC_ORG_NAME_FR, ORG_SHORT_NAME, ORG_ACRN_EN, ORG_ACRN_FR, ORG_ACRN_BIL, ORG_WEBSITE
     FROM EDR_CARZ.DIM_GC_ORGANIZATION
@@ -211,7 +214,7 @@ def business_request_prompt(language: str) -> list[Message]:
           - operator: The operator to use (eq, neq, gt, lt, gte, lte, contains, startswith, endswith)
           Can only be used after a search_business_requests has been invoked.
           Only use this function if you cannot use the search_business_requests function to get the desired results.""")
-def filter_results(filters: list[FilterParams], ctx: Context) -> dict:
+async def filter_results(filters: list[FilterParams], ctx: Context) -> dict:
     """
     Filters the results in the context using pandas DataFrame operations.
 
@@ -225,6 +228,7 @@ def filter_results(filters: list[FilterParams], ctx: Context) -> dict:
     Returns:
         Filtered results as a dictionary
     """        # Check if results are available in the context
+    await ctx.info(f"Filtering results with: {filters}")
     if ctx.request_context.lifespan_context.results and "br" in ctx.request_context.lifespan_context.results:
         # Log the filter parameters for debugging
         logger.debug(f"Applying filters: {filters}")
@@ -251,10 +255,11 @@ def filter_results(filters: list[FilterParams], ctx: Context) -> dict:
     return []
 
 @mcp.tool(description="""Returns summary statistics of the business request results found in context, focusing on key fields.""")
-def statistic_summary(ctx: Context) -> dict:
+async def statistic_summary(ctx: Context) -> dict:
     """
     Returns summary statistics of the business request results, focusing on key fields.
     """
+    await ctx.info("Generating statistics summary")
     results = ctx.request_context.lifespan_context.results
     if not results or "br" not in results:
         raise ValueError("No business request results found in context")
@@ -274,10 +279,11 @@ def statistic_summary(ctx: Context) -> dict:
 @mcp.tool(description="""Returns only the requested fields from the business request results found in the context.
           This is useful for extracting specific information from the results.
           Only fields from valid_search_fields() tool can be used.""")
-def get_br_fields(fields: list[str], ctx: Context) -> dict:
+async def get_br_fields(fields: list[str], ctx: Context) -> dict:
     """
     Returns only the requested fields from the business request results.
     """
+    await ctx.info(f"Retrieving fields: {fields}")
     for field in fields:
         if field not in BRFields.valid_search_fields:
                 raise ValueError(f"Field must be one of {list(BRFields.valid_search_fields.keys())}")
@@ -290,12 +296,13 @@ def get_br_fields(fields: list[str], ctx: Context) -> dict:
 
 @mcp.tool(description="""Returns a page of business request results from the context.
           This is useful for paginating large result sets.
-          The page size is 100 records.""")
-def get_br_page(page: int, ctx: Context) -> dict:
+          The page size is 25 records.""")
+async def get_br_page(page: int, ctx: Context) -> dict:
     """
     Returns a page of business request results from the context.
     """
-    page_size = 100
+    await ctx.info(f"Retrieving page: {page}")
+    page_size = 25
     results = ctx.request_context.lifespan_context.results
     if not results or "br" not in results:
         raise ValueError("No business request results found in context")
