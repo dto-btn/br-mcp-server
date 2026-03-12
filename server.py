@@ -62,7 +62,8 @@ REQUIRED BEHAVIOR:
 2. Do NOT use this tool to search by BR Number. Use 'get_br_by_number' for that.
 3. Use 'BR_SHORT_TITLE' to search by title (NOT 'BR_TITLE' or 'TITLE').
 4. If you encounter a ValidationError, parse the 'Name must be one of...' list in the error and IMMEDIATELY retry with the correct field name.
-5. This tool returns the 'metadata' of the search results. Use this metadata to understand the scope (counts, available columns, paging info), then use other tools such as 'filter_results', 'get_br_fields', or 'get_br_page' to retrieve or narrow the actual records.
+5. This tool returns the 'metadata' of the search results (counts, total rows, execution time). 
+6. IMPORTANT: If 'results' count in metadata is greater than 0, tell the user you found results and then IMMEDIATEY use 'get_br_page' (starting with page 0) or 'get_br_fields' to retrieve the actual record data. DO NOT tell the user there are no results if 'results' > 0.
 
 DO NOT GUESS FIELD NAMES. Use 'valid_search_fields' if unsure.""")
 async def search_business_requests(query: BRQuery, select_fields: BRSelectFields, ctx: Context) -> dict:
