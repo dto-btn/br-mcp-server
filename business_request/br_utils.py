@@ -1,10 +1,11 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import List, Optional
 
 from business_request.br_fields import BRFields
 from business_request.br_models import BRQueryFilter, BRSelectFields
 
-__all__ = ["get_br_query", "ensure_query_fields_present_in_select", "_datetime_serializer"]
+__all__ = ["get_br_query", "ensure_query_fields_present_in_select", "_data_serializer"]
 
 def ensure_query_fields_present_in_select(br_filters: List[BRQueryFilter],
                                             select_fields: BRSelectFields) -> BRSelectFields:
@@ -165,8 +166,8 @@ def get_br_query(br_number_count: int = 0,
         base_where_clause.append("s.BR_ACTIVE_EN = 'Active'")
 
     if br_number_count:
-        # Prevents SQL injection, this only calculates the placehoders ... i.e; BR_NMBR IN (%s, %s, %s)
-        placeholders = ", ".join(["%s"] * br_number_count)
+        # Prevents SQL injection, this only calculates the placehoders ... i.e; BR_NMBR IN (?, ?, ?)
+        placeholders = ", ".join(["?"] * br_number_count)
         base_where_clause.append(f"br.BR_NMBR IN ({placeholders})")
 
     if br_filters:
@@ -175,11 +176,11 @@ def get_br_query(br_number_count: int = 0,
             if field_name:
                 if br_filter.is_date():
                     # Handle date fields
-                    base_where_clause.append(f"CONVERT(DATE, {field_name['db_field']}) {br_filter.operator} %s")
+                    base_where_clause.append(f"CONVERT(DATE, {field_name['db_field']}) {br_filter.operator} ?")
                 else:
                     # Handle other fields, defaulting to LIKE operator since they are mostly strings ...
                     _op = "LIKE" if br_filter.operator != '!=' else "NOT LIKE"
-                    base_where_clause.append(f"{field_name['db_field']} {_op} %s")
+                    base_where_clause.append(f"{field_name['db_field']} {_op} ?")
 
     if base_where_clause:
         query += "WHERE " + " AND ".join(base_where_clause)
@@ -189,7 +190,7 @@ def get_br_query(br_number_count: int = 0,
     SELECT {top} *,
         COUNT(*) OVER() AS TotalCount
     FROM FilteredResults
-    """.replace("{top}", "TOP(%d)" if limit else "")
+    """.replace("{top}", "TOP(?)" if limit else "")
 
     # ORDER BY clause
     query += """
@@ -199,8 +200,10 @@ def get_br_query(br_number_count: int = 0,
     """
     return query
 
-def _datetime_serializer(obj):
-    """JSON serializer for datetime objects."""
+def _data_serializer(obj):
+    """JSON serializer for datetime and decimal objects."""
     if isinstance(obj, datetime):
         return obj.isoformat()
+    if isinstance(obj, Decimal):
+        return float(obj)
     raise TypeError(f"Type {type(obj)} not serializable")

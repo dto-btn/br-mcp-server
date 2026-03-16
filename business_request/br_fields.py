@@ -7,6 +7,10 @@ class BRFields:
         'BR_OWNER': { 'db_field': 'opis.BR_OWNER', 'description': 'The OPI responsible for the BR. Typically a Service Delivery Manager. OPI means Office of Primary Interest.', 'is_user_field': True, 'en': 'BR OWNER', 'fr': 'Responsable de la DO'},
     }
 
+    br_number = {
+        'BR_NUMBER': { 'db_field': 'br.BR_NMBR', 'description': 'The unique identifier for the Business Request (BR).', 'en': 'BR Number', 'fr': 'Numéro de la DO' },
+    }
+
     # active = {
     #     'BR_ACTIVE_EN': { 'db_field': 's.BR_ACTIVE_EN', 'description': 'Indicates if the BR is active.', 'en': 'Active', 'fr': 'Actif' },
     #     'BR_ACTIVE_FR': { 'db_field': 's.BR_ACTIVE_FR', 'description': 'Indique si la BR est active.', 'en': 'Active', 'fr': 'Actif' },
@@ -80,6 +84,7 @@ class BRFields:
     valid_search_fields = {}
     valid_search_fields.update(base_fields)
     valid_search_fields.update(br_owner)
+    valid_search_fields.update(br_number)
     valid_search_fields.update(date_fields)
 
     valid_search_fields_filterable = valid_search_fields.copy()

@@ -40,6 +40,7 @@ General Guidelines:
 - ALWAYS use the 'en' or 'fr' field from the valid_search_fields() tool to ensure you are using the correct field name in the query. Do not use the raw field names directly unless the user is already refering to them in their query.
 - If you are being prompted by the user on how to search for BRs you can use the information you have here to help guide the users about your capabilities.
 - Use the get_organization_names() tool to resolve organization acronyms to full names when searching for BRs by client name.
+- If a tool returns a ValidationError regarding field names, refer to the provided list of valid fields in the error message and retry immediately with the corrected field name.
 
 Tools (functions) guidelines:
 
@@ -96,8 +97,7 @@ Directives générales :
 - Utilisez TOUJOURS le champ « fr » ou « en » dans l’outil valid_search_fields() pour garantir que vous utilisez le bon nom de champ dans la requête. N’utilisez les noms de champs bruts que si l’utilisateur s’y réfère déjà dans sa demande.
 - Si l’utilisateur vous demande comment rechercher des DA, vous pouvez utiliser les informations présentes ici pour guider l’utilisateur sur vos capacités.
 - Utilisez l’outil get_organization_names() pour convertir les acronymes d’organisations en noms complets lors de la recherche de DA par nom de client.
-
-################################################
+- Si un outil retourne une erreur de validation (ValidationError) concernant les noms de champs, reportez-vous à la liste des champs valides fournie dans le message d'erreur et réessayez immédiatement avec le nom de champ corrigé.
 
 Directives relatives aux outils (fonctions) :
 

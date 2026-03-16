@@ -1,15 +1,18 @@
 import json
 import logging
 import os
+
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Optional
-
-import pandas as pd
 from dotenv import load_dotenv
-from mcp.server.fastmcp import FastMCP, Context
+import pandas as pd
+
+from fastmcp import FastMCP, Context
 from mcp.server.fastmcp.prompts.base import Message
+from starlette.middleware import Middleware
+from starlette.middleware.cors import CORSMiddleware
 
 from business_request.br_fields import BRFields
 from business_request.br_models import BRQuery, BRSelectFields, FilterParams
@@ -47,21 +50,22 @@ async def server_lifespan(server: FastMCP) -> AsyncIterator[BRContext]:
         pass  # Add cleanup code here if needed
 
 # Create an MCP server with lifespan management
-mcp = FastMCP("Business Requests",
-              version="1.0.0",
-              lifespan=server_lifespan,
-              dependencies=["pydantic", "pandas"], # Add any dependencies your server needs
-              stateless_http=True, # fix from https://github.com/jlowin/fastmcp/issues/435#issuecomment-2888502679
-            #   auth_server_provider=MSAuthProvider(),
-            #   auth=AuthSettings(
-            #       issuer_url="https://auth.example.com",
-            #       client_id=os.getenv("CLIENT_ID"),
-            #       client_secret=os.getenv("CLIENT_SECRET"),
-            #       redirect_uri=os.getenv("REDIRECT_URI"),
-            #       scopes=["openid", "profile", "email"],)
-            )
+mcp = FastMCP(
+    name="Business Requests",
+    lifespan=server_lifespan
+)
 
-@mcp.tool(description="This tool searches information about BRs given specific BR field(s) and value(s) pairs.")
+@mcp.tool(description="""This tool searches for Business Requests (BRs) based on specific fields (e.g. SUBMIT_DATE, RPT_GC_ORG_NAME_EN, BR_SHORT_TITLE).
+
+REQUIRED BEHAVIOR:
+1. ALWAYS use internal field names (e.g. 'SUBMIT_DATE', not 'SUBMISSION_DATE').
+2. Do NOT use this tool to search by BR Number. Use 'get_br_by_number' for that.
+3. Use 'BR_SHORT_TITLE' to search by title (NOT 'BR_TITLE' or 'TITLE').
+4. If you encounter a ValidationError, parse the 'Name must be one of...' list in the error and IMMEDIATELY retry with the correct field name.
+5. This tool returns the 'metadata' of the search results (counts, total rows, execution time). 
+6. IMPORTANT: If 'results' count in metadata is greater than 0, tell the user you found results and then IMMEDIATEY use 'get_br_page' (starting with page 0) or 'get_br_fields' to retrieve the actual record data. DO NOT tell the user there are no results if 'results' > 0.
+
+DO NOT GUESS FIELD NAMES. Use 'valid_search_fields' if unsure.""")
 async def search_business_requests(query: BRQuery, select_fields: BRSelectFields, ctx: Context) -> dict:
     """Returns the BR database query
 
@@ -89,27 +93,33 @@ async def search_business_requests(query: BRQuery, select_fields: BRSelectFields
             query_params.append(query_filter.value)
         else:
             query_params.append(f"%{query_filter.value}%")
-    query_params.append(query.limit)
+    
+    # Only append limit if it's explicitly set to a value > 0 and the query actually uses TOP()
+    if query.limit and query.limit > 0:
+        query_params.append(query.limit)
+        
     result = ctx.request_context.lifespan_context.database.execute_query(sql_query, *query_params)
     result["brquery"] = query.model_dump()
     result["brselect"] = fields.model_dump()
     ctx.request_context.lifespan_context.results = result
-    return f"Ran the query successfully, here is the metadata results from running this query: {result['metadata']}"
+    return result['metadata']
 
 @mcp.tool(description="""Returns Business Request(s) (BR) information.
           Can be invoked for one OR many BR numbers at the same time.
           I.e; Give me BR info for 12345, 32456 and 66123. Should only invoke this function once""")
-def get_br_by_number(br_numbers: list[int], ctx: Context) -> dict:
+async def get_br_by_number(br_numbers: list[int], ctx: Context) -> dict:
     """Returns a BR requests by their numbers"""
+    await ctx.info(f"Getting BRs by numbers: {br_numbers}")
     #BRs here do not need to be active to be returned
-    query = get_br_query(len(br_numbers), active=False)
+    query = get_br_query(len(br_numbers), active=False, show_all=True)
     result = ctx.request_context.lifespan_context.database.execute_query(query, *br_numbers)
     ctx.request_context.lifespan_context.results = result
     return result
 
 @mcp.tool()
-def get_business_requests_context(ctx: Context) -> dict:
+async def get_business_requests_context(ctx: Context) -> dict:
     """Returns the context of the business requests"""
+    await ctx.info("Retrieving business requests context")
     # Check if results are available in the context
     if ctx.request_context.lifespan_context.results:
         return ctx.request_context.lifespan_context.results
@@ -153,10 +163,11 @@ def get_br_statuses_and_phases() -> dict:
           This can be invoked when a user is searching for BRs by a client name but is using the acronym.
           Example: Search for BRs with clients PC.
           You would resolve it to Parks Canada and search for RPT_GC_ORG_NAME_EN = Parks Canada.""")
-def get_organization_names(ctx: Context) -> dict:
+async def get_organization_names(ctx: Context) -> dict:
     """
     This will retreive organization so AI can look them up.
     """
+    await ctx.info("Retrieving organization names")
     query = """
     SELECT GC_ORG_NAME_EN, GC_ORG_NAME_FR, ORG_SHORT_NAME, ORG_ACRN_EN, ORG_ACRN_FR, ORG_ACRN_BIL, ORG_WEBSITE
     FROM EDR_CARZ.DIM_GC_ORGANIZATION
@@ -166,7 +177,8 @@ def get_organization_names(ctx: Context) -> dict:
 @mcp.tool(description="""Use this function to list all the valid search fields.
           This can be used to get the field names that are available to search for BRs.
           French and english label are included. The user might use the labels to see what fields the users are
-          refering to when they use language instead of directly typing the field names.""")
+          refering to when they use language instead of directly typing the field names.
+          Always call this function if you encounter a ValidationError when using search_business_requests.""")
 def valid_search_fields() -> dict:
     """
     This function returns all the valid search fields
@@ -174,7 +186,9 @@ def valid_search_fields() -> dict:
     fields_with_descriptions = {
         key: {
             'description': value.get('description', ''),
-            'is_user_field': value.get('is_user_field', False)
+            'is_user_field': value.get('is_user_field', False),
+            'fr_label': value.get('fr', ''),
+            'en_label': value.get('en', '')
         }
         for key, value in BRFields.valid_search_fields_filterable.items()
     }
@@ -200,7 +214,7 @@ def business_request_prompt(language: str) -> list[Message]:
           - operator: The operator to use (eq, neq, gt, lt, gte, lte, contains, startswith, endswith)
           Can only be used after a search_business_requests has been invoked.
           Only use this function if you cannot use the search_business_requests function to get the desired results.""")
-def filter_results(filters: list[FilterParams], ctx: Context) -> dict:
+async def filter_results(filters: list[FilterParams], ctx: Context) -> dict:
     """
     Filters the results in the context using pandas DataFrame operations.
 
@@ -214,6 +228,7 @@ def filter_results(filters: list[FilterParams], ctx: Context) -> dict:
     Returns:
         Filtered results as a dictionary
     """        # Check if results are available in the context
+    await ctx.info(f"Filtering results with: {filters}")
     if ctx.request_context.lifespan_context.results and "br" in ctx.request_context.lifespan_context.results:
         # Log the filter parameters for debugging
         logger.debug(f"Applying filters: {filters}")
@@ -240,10 +255,11 @@ def filter_results(filters: list[FilterParams], ctx: Context) -> dict:
     return []
 
 @mcp.tool(description="""Returns summary statistics of the business request results found in context, focusing on key fields.""")
-def statistic_summary(ctx: Context) -> dict:
+async def statistic_summary(ctx: Context) -> dict:
     """
     Returns summary statistics of the business request results, focusing on key fields.
     """
+    await ctx.info("Generating statistics summary")
     results = ctx.request_context.lifespan_context.results
     if not results or "br" not in results:
         raise ValueError("No business request results found in context")
@@ -263,10 +279,11 @@ def statistic_summary(ctx: Context) -> dict:
 @mcp.tool(description="""Returns only the requested fields from the business request results found in the context.
           This is useful for extracting specific information from the results.
           Only fields from valid_search_fields() tool can be used.""")
-def get_br_fields(fields: list[str], ctx: Context) -> dict:
+async def get_br_fields(fields: list[str], ctx: Context) -> dict:
     """
     Returns only the requested fields from the business request results.
     """
+    await ctx.info(f"Retrieving fields: {fields}")
     for field in fields:
         if field not in BRFields.valid_search_fields:
                 raise ValueError(f"Field must be one of {list(BRFields.valid_search_fields.keys())}")
@@ -279,12 +296,13 @@ def get_br_fields(fields: list[str], ctx: Context) -> dict:
 
 @mcp.tool(description="""Returns a page of business request results from the context.
           This is useful for paginating large result sets.
-          The page size is 100 records.""")
-def get_br_page(page: int, ctx: Context) -> dict:
+          The page size is 25 records.""")
+async def get_br_page(page: int, ctx: Context) -> dict:
     """
     Returns a page of business request results from the context.
     """
-    page_size = 100
+    await ctx.info(f"Retrieving page: {page}")
+    page_size = 25
     results = ctx.request_context.lifespan_context.results
     if not results or "br" not in results:
         raise ValueError("No business request results found in context")
@@ -293,7 +311,45 @@ def get_br_page(page: int, ctx: Context) -> dict:
     end = start + page_size
     return {"page": page, "page_size": page_size, "results": data[start:end]}
 
+# Attach permissive CORS so browsers can connect directly without preflight/CORS errors
+CORS_ORIGINS_RAW = os.getenv("CORS_ALLOW_ORIGINS", "")
+CORS_ALLOW_CREDENTIALS = os.getenv("CORS_ALLOW_CREDENTIALS", "false").strip().lower() in {
+    "1", "true", "yes", "on"
+}
+
+if CORS_ORIGINS_RAW:
+    CORS_ORIGINS = [
+        origin.strip() for origin in CORS_ORIGINS_RAW.split(",") if origin.strip()
+    ]
+else:
+    CORS_ORIGINS = ["http://localhost", "http://127.0.0.1"]
+
+# CORS spec safety: wildcard origins cannot be used with credentials.
+if "*" in CORS_ORIGINS and CORS_ALLOW_CREDENTIALS:
+    logging.warning(
+        "CORS_ALLOW_CREDENTIALS=true is incompatible with wildcard origins; "
+        "forcing credentials off."
+    )
+    CORS_ALLOW_CREDENTIALS = False
+
+middleware = [
+    Middleware(
+        CORSMiddleware,
+        allow_origins=CORS_ORIGINS,
+        allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+        allow_headers=[
+            "mcp-protocol-version",
+            "mcp-session-id",
+            "Authorization",
+            "Content-Type",
+        ],
+        expose_headers=["mcp-session-id"],
+        allow_credentials=CORS_ALLOW_CREDENTIALS,
+    )
+]
+
 if __name__ == "__main__":
-    mcp.run(host=os.environ.get("HOST", "0.0.0.0"),
-            port=int(os.environ.get("PORT", 8000)),
-            log_level="debug")
+    mcp.run(
+        transport="http",
+        middleware=middleware,
+    )
